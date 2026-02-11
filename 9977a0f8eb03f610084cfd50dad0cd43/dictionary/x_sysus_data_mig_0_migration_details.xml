@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?><database>
+    <element db_object_id="c7b7a8f8eb03f610084cfd50dad0cde6" label="Migration details" max_length="40" name="x_sysus_data_mig_0_migration_details" type="collection">
+        <element label="Success Rate" max_length="255" name="success_rate" type="integer"/>
+        <element attributes="edge_encryption_enabled=true" default="javascript:global.getNextObjNumberPadded();" display="true" label="Number" max_length="40" name="number" type="string"/>
+        <element label="Table" max_length="80" name="table" type="string"/>
+        <element label="Records Fetched" max_length="255" name="records_fetched" type="integer"/>
+        <element label="Records Inserted" max_length="255" name="records_inserted" type="integer"/>
+        <element label="Instance URL" max_length="100" name="instance_url" type="string"/>
+    </element>
+</database>

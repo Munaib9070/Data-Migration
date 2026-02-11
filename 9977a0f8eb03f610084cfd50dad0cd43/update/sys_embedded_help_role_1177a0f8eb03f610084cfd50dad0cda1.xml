@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_embedded_help_role">
+    <sys_embedded_help_role action="INSERT_OR_UPDATE">
+        <order>10</order>
+        <role display_value="x_sysus_data_mig_0.admin" name="x_sysus_data_mig_0.admin">9577a0f8eb03f610084cfd50dad0cd9e</role>
+        <sys_class_name>sys_embedded_help_role</sys_class_name>
+        <sys_created_by>munaib.ashraf</sys_created_by>
+        <sys_created_on>2026-02-11 06:57:21</sys_created_on>
+        <sys_id>1177a0f8eb03f610084cfd50dad0cda1</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>9577a0f8eb03f610084cfd50dad0cd9e</sys_name>
+        <sys_package display_value="Data Migration" source="x_sysus_data_mig_0">9977a0f8eb03f610084cfd50dad0cd43</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Data Migration">9977a0f8eb03f610084cfd50dad0cd43</sys_scope>
+        <sys_update_name>sys_embedded_help_role_1177a0f8eb03f610084cfd50dad0cda1</sys_update_name>
+        <sys_updated_by>munaib.ashraf</sys_updated_by>
+        <sys_updated_on>2026-02-11 06:57:21</sys_updated_on>
+    </sys_embedded_help_role>
+</record_update>

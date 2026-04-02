@@ -1,0 +1,319 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_widget">
+    <sp_widget action="INSERT_OR_UPDATE">
+        <category>custom</category>
+        <client_script><![CDATA[api.controller = function($location){
+
+  var c = this;
+
+  c.cid = sessionStorage.getItem('currentId');
+
+  c.isActive = function(page){
+    return $location.search().id === page;
+  };
+
+  c.getCartCount = function(){
+    var cart = JSON.parse(sessionStorage.getItem("migration_cart") || "[]");
+    return cart.length;
+  };
+
+};]]></client_script>
+        <controller_as>c</controller_as>
+        <css>*{
+  outline-style:none!important;
+}
+
+.dm-sidebar{
+  width:100%;
+  height:calc(100vh - 64px);
+  background:#fff;
+  border-right:1px solid #edf0f5;
+  padding:22px 14px;
+}
+
+.dm-menu{
+  list-style:none;
+  padding:0;
+  margin:0;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.dm-menu a{
+  display:flex;
+  align-items:center;
+  padding:10px 12px;
+  border-radius:16px;
+  text-decoration:none;
+  font-size:15px;
+  font-weight:500;
+  color:#3b4455;
+  transition:all .25s ease;
+}
+
+.dm-menu a:focus,
+.dm-menu a:active,
+.dm-menu a:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.dm-icon-box{
+  width:36px;
+  height:36px;
+  border-radius:11px;
+  background:#f5f7fb;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  margin-right:13px;
+  flex-shrink:0;
+}
+
+.dm-icon-box svg{
+  width:17px;
+  height:17px;
+  stroke:#1F8C95;
+  stroke-width:1.7;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+
+.dm-text{
+  flex:1;
+  line-height:1.25;
+}
+
+.dm-right{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.dm-arrow{
+  width:16px;
+  height:16px;
+  stroke:#1F8C95;
+  stroke-width:2;
+  opacity:0;
+  visibility:hidden;
+  flex-shrink:0;
+  transition:all .2s ease;
+}
+
+.cart-badge{
+  background:#1F8C95;
+  color:#fff;
+  font-size:11px;
+  min-width:20px;
+  height:20px;
+  border-radius:4px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0 6px;
+}
+.cart-li.active .cart-badge{
+	background: #fff;
+  color:#000;
+}
+.cart-li:hover .cart-badge{
+  background: #fff;
+  color:#000;
+}
+.dm-menu li:not(.active) a:hover{
+  background:#1F8C95;
+  color:#fff;
+}
+
+.dm-menu li.active a{
+   background: linear-gradient(to right, #128a9a, #0a5f6d);
+
+  transition: all 2s ease-out;
+  color:#fff;
+  box-shadow:0 8px 22px rgba(37,99,235,.22);
+}
+
+.dm-menu li.active .dm-icon-box{
+  background:rgba(255,255,255,.15);
+}
+
+.dm-menu li.active .dm-icon-box svg{
+  stroke:#fff;
+}
+
+.dm-menu li.active .dm-arrow{
+  opacity:1;
+  visibility:visible;
+  stroke:#fff;
+}</css>
+        <data_table>sp_instance</data_table>
+        <demo_data/>
+        <description/>
+        <docs/>
+        <field_list/>
+        <has_preview>true</has_preview>
+        <id>dmm_sidebar</id>
+        <internal>false</internal>
+        <link><![CDATA[function link(scope, element, attrs, controller) {
+  
+}]]></link>
+        <name>DMM Sidebar</name>
+        <option_schema/>
+        <public>false</public>
+        <roles/>
+        <script><![CDATA[(function() {
+  /* populate the 'data' object */
+  /* e.g., data.table = $sp.getValue('table'); */
+
+})();]]></script>
+        <servicenow>false</servicenow>
+        <sys_class_name>sp_widget</sys_class_name>
+        <sys_created_by>bareen.makhdoomi</sys_created_by>
+        <sys_created_on>2026-02-19 09:50:13</sys_created_on>
+        <sys_id>d5bb165f3b47f650deb2090eb3e45a7a</sys_id>
+        <sys_mod_count>156</sys_mod_count>
+        <sys_name>DMM Sidebar</sys_name>
+        <sys_package display_value="Data Migration" source="x_sysus_data_mig_0">9977a0f8eb03f610084cfd50dad0cd43</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Data Migration">9977a0f8eb03f610084cfd50dad0cd43</sys_scope>
+        <sys_update_name>sp_widget_d5bb165f3b47f650deb2090eb3e45a7a</sys_update_name>
+        <sys_updated_by>irfan.wani</sys_updated_by>
+        <sys_updated_on>2026-04-01 06:48:32</sys_updated_on>
+        <template><![CDATA[
+<div class="dm-sidebar">
+
+  <ul class="dm-menu">
+
+    <li ng-class="{active: c.isActive('dm_home')}">
+      <a href="/datamigration?id=dm_home">
+        <span class="dm-icon-box">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect width="7" height="9" x="3" y="3" rx="1"></rect>
+            <rect width="7" height="5" x="14" y="3" rx="1"></rect>
+            <rect width="7" height="9" x="14" y="12" rx="1"></rect>
+            <rect width="7" height="5" x="3" y="16" rx="1"></rect>
+          </svg>
+        </span>
+        <span class="dm-text">Dashboard</span>
+        <div class="dm-right">
+          <svg class="dm-arrow" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="m9 18 6-6-6-6"/>
+          </svg>
+        </div>
+      </a>
+    </li>
+
+    <li ng-class="{active: c.isActive('dm_connection_list')}">
+      <a href="/datamigration?id=dm_connection_list">
+        <span class="dm-icon-box">
+          <svg xmlns="http://www.w3.org/2000/svg"  viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-unplug-icon lucide-unplug"><path d="m19 5 3-3"/><path d="m2 22 3-3"/><path d="M6.3 20.3a2.4 2.4 0 0 0 3.4 0L12 18l-6-6-2.3 2.3a2.4 2.4 0 0 0 0 3.4Z"/><path d="M7.5 13.5 10 11"/><path d="M10.5 16.5 13 14"/><path d="m12 6 6 6 2.3-2.3a2.4 2.4 0 0 0 0-3.4l-2.6-2.6a2.4 2.4 0 0 0-3.4 0Z"/></svg>
+        </span>
+        <span class="dm-text">Connections</span>
+        <div class="dm-right">
+          <svg class="dm-arrow" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="m9 18 6-6-6-6"/>
+          </svg>
+        </div>
+      </a>
+    </li>
+
+    <li ng-class="{active: c.isActive('dm_browse_tables')}">
+      <a href="/datamigration?id=dm_browse_tables&sys_id={{c.cid}}">
+        <span class="dm-icon-box">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="m21 21-4.34-4.34"></path>
+            <circle cx="11" cy="11" r="8"></circle>
+          </svg>
+        </span>
+        <span class="dm-text">Browse Tables</span>
+        <div class="dm-right">
+          <svg class="dm-arrow" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="m9 18 6-6-6-6"/>
+          </svg>
+        </div>
+      </a>
+    </li>
+
+    <li ng-class="{active: c.isActive('dm_cart')}" class="cart-li">
+      <a href="/datamigration?id=dm_cart">
+        <span class="dm-icon-box">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="8" cy="21" r="1"></circle>
+            <circle cx="19" cy="21" r="1"></circle>
+            <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path>
+          </svg>
+        </span>
+        <span class="dm-text">Queue</span>
+        <div class="dm-right">
+          <span class="cart-badge" ng-if="c.getCartCount() > 0">{{c.getCartCount()}}</span>
+          <svg class="dm-arrow" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="m9 18 6-6-6-6"/>
+          </svg>
+        </div>
+      </a>
+    </li>
+
+    <li ng-class="{active: c.isActive('dm_report')}">
+      <a href="/datamigration?id=dm_report">
+        <span class="dm-icon-box">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 3v16a2 2 0 0 0 2 2h16"></path>
+            <path d="M18 17V9"></path>
+            <path d="M13 17V5"></path>
+            <path d="M8 17v-3"></path>
+          </svg>
+        </span>
+        <span class="dm-text">Reports</span>
+        <div class="dm-right">
+          <svg class="dm-arrow" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="m9 18 6-6-6-6"/>
+          </svg>
+        </div>
+      </a>
+    </li>
+
+    <li ng-class="{active: c.isActive('dm_history')}">
+      <a href="/datamigration?id=dm_history">
+        <span class="dm-icon-box">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+            <path d="M3 3v5h5"></path>
+            <path d="M12 7v5l4 2"></path>
+          </svg>
+        </span>
+        <span class="dm-text">History</span>
+        <div class="dm-right">
+          <svg class="dm-arrow" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="m9 18 6-6-6-6"/>
+          </svg>
+        </div>
+      </a>
+    </li>
+
+<!-- <li ng-class="{active: c.isActive('dm_setting')}">
+      <a href="/datamigration?id=dm_setting">
+        <span class="dm-icon-box">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+        </span>
+        <span class="dm-text">Settings</span>
+        <div class="dm-right">
+          <svg class="dm-arrow" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="m9 18 6-6-6-6"/>
+          </svg>
+        </div>
+      </a>
+    </li> -->
+
+  </ul>
+
+</div>
+
+
+
+]]></template>
+    </sp_widget>
+</record_update>

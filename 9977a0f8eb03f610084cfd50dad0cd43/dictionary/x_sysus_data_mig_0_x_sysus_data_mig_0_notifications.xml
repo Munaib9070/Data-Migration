@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?><database>
+    <element db_object_id="055f540e3b737e103509f3cc73e45a4f" extends="sys_connection" label="notifications" max_length="40" name="x_sysus_data_mig_0_x_sysus_data_mig_0_notifications" type="collection">
+        <element label="priority" max_length="40" name="priority" type="string"/>
+        <element label="message" max_length="40" name="message" type="string"/>
+        <element label="user" max_length="32" name="user" reference="sys_user" type="reference"/>
+        <element attributes="edge_encryption_enabled=true" default="javascript:global.getNextObjNumberPadded();" label="Number" max_length="40" name="number" type="string"/>
+        <element label="type" max_length="40" name="type" type="string"/>
+        <element label="title" max_length="40" name="title" type="string"/>
+        <element label="read" max_length="255" name="read" type="boolean"/>
+        <index name="index">
+            <element name="user"/>
+        </index>
+    </element>
+</database>

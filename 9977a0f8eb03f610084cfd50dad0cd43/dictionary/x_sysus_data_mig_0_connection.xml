@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?><database>
+    <element db_object_id="3164e69f3b87f650deb2090eb3e45a04" label="Connection" max_length="40" name="x_sysus_data_mig_0_connection" type="collection">
+        <element label="Last connected" max_length="40" name="last_connected" type="glide_date"/>
+        <element label="Name" max_length="40" name="name" type="string"/>
+        <element label="State" max_length="40" name="state" type="boolean"/>
+        <element label="URL" max_length="40" name="url" type="string"/>
+        <element label="Password" max_length="255" name="password" type="password2"/>
+        <element attributes="edge_encryption_enabled=true" default="javascript:global.getNextObjNumberPadded();" label="Number" max_length="40" name="number" type="string"/>
+        <element label="Username" max_length="40" name="username" type="string"/>
+    </element>
+</database>

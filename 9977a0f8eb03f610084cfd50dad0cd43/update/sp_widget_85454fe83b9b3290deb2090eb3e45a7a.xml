@@ -1,0 +1,293 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_widget">
+    <sp_widget action="INSERT_OR_UPDATE">
+        <category>custom</category>
+        <client_script><![CDATA[api.controller=function() {
+  /* widget controller */
+  var c = this;
+};]]></client_script>
+        <controller_as>c</controller_as>
+        <css>/* ===============================
+   MAIN LAYOUT
+=============================== */
+.all-connections-wrapper {
+  display: flex;
+  align-items: flex-start;
+  max-height: calc(100vh - 64px);
+  position: relative;
+}
+
+/* Sidebar */
+.dm-sidebar-slot {
+  width: 250px;
+  flex-shrink: 0;
+}
+
+/* Right content column */
+.content-area {
+  flex: 1;
+  padding: 10px 30px 30px 30px;
+  max-height: calc(100vh - 64px);
+  position: relative;
+  overflow-y:auto;
+}
+
+/* ===============================
+   HEADER FIX
+=============================== */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+  gap: 20px;
+}
+
+.header-left p {
+  margin-bottom: 0;
+}
+
+.page-header h2 {
+  font-size: 28px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.page-header p {
+  color: #6b7280;
+  margin-bottom: 16px;
+  max-width: 420px;
+}
+
+
+/* ===============================
+   TABLE CARD
+=============================== */
+.table-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.06);
+}
+
+/* Table */
+.dm-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.dm-table th {
+  text-align: left;
+  padding: 12px;
+  background: #f3f4f6;
+  font-weight: 600;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.dm-table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid #f1f3f6;
+}
+
+.dm-table tr:hover {
+  background: #f9fafb;
+}
+
+/* Badges */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.status-badge i {
+  font-size: 13px;
+}
+
+.status-success {
+  background: #d1fae5;
+  color: #047857;
+}
+
+.status-partial {
+  background: #fdecc8;
+  color: #b45309;
+}
+
+.status-error {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.tblback {
+  color:#4764D3;
+}
+
+/* ===============================
+   RESPONSIVE
+=============================== */
+@media (max-width: 900px) {
+  .all-connections-wrapper {
+    flex-direction: column;
+  }
+
+  .dm-sidebar-slot {
+    width: 100%;
+  }
+}</css>
+        <data_table>sp_instance</data_table>
+        <demo_data/>
+        <description/>
+        <docs/>
+        <field_list/>
+        <has_preview>true</has_preview>
+        <id>dmm_entire_connection</id>
+        <internal>false</internal>
+        <link><![CDATA[function link(scope, element, attrs, controller) {
+  
+}]]></link>
+        <name>Entire Connection List</name>
+        <option_schema/>
+        <public>false</public>
+        <roles/>
+        <script><![CDATA[(function() {
+  data.side = $sp.getWidget('dmm_sidebar');
+  data.connections = [];
+
+  var gr = new GlideRecord('x_sysus_data_mig_0_migration_details');
+  gr.orderByDesc('sys_created_on');
+  gr.addQuery('sys_created_by', gs.getUserName());
+  gr.query();
+
+  while (gr.next()) {
+		
+		var tablesArr = [];
+ 
+var tablesStr = gr.getValue('table') || "";
+ 
+tablesArr.push()
+    data.connections.push({
+      sys_id: gr.getUniqueValue(),
+      number: gr.getValue('number'), // ✅ fixed typo
+      tables: Object.keys(JSON.parse(tablesStr)), // ✅ array for badges
+      records: gr.getValue('records_inserted') || '0', // ✅ added records
+      state: gr.getValue('state'),
+      duration: gr.getValue('duration'),
+      created: gr.getDisplayValue('sys_created_on'),
+			
+			successRate: parseInt(gr.getValue('success_rate')) || 0
+    });
+  }
+
+})();]]></script>
+        <servicenow>false</servicenow>
+        <sys_class_name>sp_widget</sys_class_name>
+        <sys_created_by>munaib.ashraf</sys_created_by>
+        <sys_created_on>2026-02-23 10:04:38</sys_created_on>
+        <sys_id>85454fe83b9b3290deb2090eb3e45a7a</sys_id>
+        <sys_mod_count>69</sys_mod_count>
+        <sys_name>Entire Connection List</sys_name>
+        <sys_package display_value="Data Migration" source="x_sysus_data_mig_0">9977a0f8eb03f610084cfd50dad0cd43</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Data Migration">9977a0f8eb03f610084cfd50dad0cd43</sys_scope>
+        <sys_update_name>sp_widget_85454fe83b9b3290deb2090eb3e45a7a</sys_update_name>
+        <sys_updated_by>munaib.ashraf</sys_updated_by>
+        <sys_updated_on>2026-03-30 10:48:31</sys_updated_on>
+        <template><![CDATA[<div class="all-connections-wrapper">
+
+  <!-- SIDEBAR -->
+  <div class="dm-sidebar-slot">
+    <sp-widget widget='data.side'></sp-widget>
+  </div>
+
+  <!-- RIGHT CONTENT -->
+  <div class="content-area">
+  
+    <div class="page-header">
+      <div class="header-left">
+      <h2>All Migrations</h2>
+      <p>A complete overview of your data transfer activities</p>
+    </div>
+    </div>
+<div class="table-card">
+  <table class="dm-table">
+    <thead>
+      <tr>
+        <th>Migration ID</th>
+        <th>Tables</th>
+        <th>Records</th>
+        <th>Status</th>
+        <th>Duration</th>
+        <th>Date</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      <tr ng-repeat="conn in c.data.connections">
+        
+        <!-- Migration ID -->
+        <td class="run">{{conn.number}}</td>
+
+        <!-- Tables -->
+        <td>
+          <span class="badge tblback" ng-repeat="t in conn.tables">
+            {{t}}
+          </span>
+        </td>
+
+        <!-- Records -->
+        <td class="records">
+          {{conn.records}}
+        </td>
+
+        <!-- Status -->
+      <td>
+  <span class="status-badge"
+        ng-class="{
+          'status-success': conn.successRate == 100,
+          'status-partial': conn.successRate > 0 && conn.successRate < 100,
+          'status-error': conn.successRate == 0
+        }">
+
+    <i class="fa"
+       ng-class="{
+         'fa-check-circle': conn.successRate == 100,
+         'fa-clock-o': conn.successRate > 0 && conn.successRate < 100,
+         'fa-times-circle': conn.successRate == 0
+       }">
+    </i>
+
+    {{ conn.successRate == 100 
+        ? "Success" 
+        : conn.successRate > 0 
+            ? "Partial" 
+            : "Failed" }}
+
+  </span>
+</td>
+
+        <!-- Duration -->
+        <td>{{conn.duration}}</td>
+
+        <!-- Date -->
+        <td>{{conn.created}}</td>
+
+      </tr>
+
+      <!-- Empty State -->
+      <tr ng-if="!c.data.connections.length">
+        <td colspan="6" class="empty">
+          No migrations found
+        </td>
+      </tr>
+
+    </tbody>
+  </table>
+</div>
+
+</div>]]></template>
+    </sp_widget>
+</record_update>

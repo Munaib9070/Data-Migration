@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_widget">
+    <sp_widget action="INSERT_OR_UPDATE">
+        <category>custom</category>
+        <client_script><![CDATA[api.controller=function() {
+  /* widget controller */
+  var c = this;
+};]]></client_script>
+        <controller_as>c</controller_as>
+        <css>/* FULL SCREEN CONTAINER */
+.error-404 {
+  height: 100vh;
+  width: 100vw;
+  position: fixed;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #222;
+  overflow: hidden;
+  margin: 0;
+  padding: 20px;
+  z-index: 9999;
+}
+
+/* FULL SCREEN BLUR GLASS */
+.error-content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 60px 40px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 25px 50px rgba(0,0,0,0.4);
+  width:100%;
+  margin: 0 auto;
+}
+
+/* FLOATING ORBS - FULL SCREEN */
+.error-bg-circle {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(40px);
+  opacity: 0.5;
+  z-index: 1;
+}
+
+.error-bg-circle.purple {
+  width: 400px;
+  height: 400px;
+  background: #2563eb;
+  top: 10%;
+  left: 10%;
+  animation: float 6s ease-in-out infinite;
+}
+
+.error-bg-circle.pink {
+  width: 300px;
+  height: 300px;
+  background: #fff;
+  bottom: 15%;
+  right: 10%;
+  animation: float 8s ease-in-out infinite reverse;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-25px) rotate(180deg); }
+}
+
+/* ANIMATED ELEMENTS */
+.error-icon { margin-bottom: 30px; }
+
+.error-code {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.error-code span {
+  font-size: 80px;
+  font-weight: 900;
+  background: linear-gradient(135deg, #2563eb 0%, #fff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1;
+}
+
+.error-code .glow {
+  animation: glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+  from { filter: drop-shadow(0 0 15px rgba(168, 85, 247, 0.6)); }
+  to { filter: drop-shadow(0 0 25px rgba(168, 85, 247, 0.9)); }
+}
+
+.error-title {
+  color: white;
+  font-size: 36px;
+  font-weight: 800;
+  margin: 0 0 16px;
+  line-height: 1.2;
+}
+
+.error-subtitle {
+  color: #cbd5e1;
+  font-size: 18px;
+  margin: 0 0 40px;
+  line-height: 1.6;
+  max-width: 300px;
+}
+
+.error-actions {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 32px;
+}
+
+.error-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 16px 32px;
+  border-radius: 50px;
+  font-weight: 700;
+  font-size: 15px;
+  text-decoration: none;
+  color: white;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 2px solid transparent;
+  backdrop-filter: blur(10px);
+}
+
+.error-btn:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+}
+
+.back-btn {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.4);
+}
+
+.back-btn:hover {
+  background: rgba(59, 130, 246, 0.5);
+  border-color: #3b82f6;
+}
+
+.home-btn {
+  background: #2563eb;
+  box-shadow: 0 10px 30px rgba(16, 185, 129, 0.3);
+}
+
+.home-btn:hover {
+  box-shadow: 0 20px 40px rgba(16, 185, 129, 0.4);
+  transform: translateY(-4px) scale(1.05);
+}
+
+.error-footer {
+  margin-top: auto;
+  padding-top: 32px;
+}
+
+.error-footer small {
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+/* MOBILE */
+@media (max-width: 640px) {
+  .error-404 { padding: 10px; }
+  .error-content { padding: 40px 24px; }
+  .error-code span { font-size: 56px; }
+  .error-title { font-size: 28px; }
+  .error-actions { flex-direction: column; width: 100%; }
+  .error-btn { justify-content: center; width: 100%; }
+}
+</css>
+        <data_table>sp_instance</data_table>
+        <demo_data/>
+        <description/>
+        <docs/>
+        <field_list/>
+        <has_preview>true</has_preview>
+        <id>dm_404</id>
+        <internal>false</internal>
+        <link><![CDATA[function link(scope, element, attrs, controller) {
+  
+}]]></link>
+        <name>Not Found</name>
+        <option_schema/>
+        <public>false</public>
+        <roles/>
+        <script><![CDATA[(function() {
+  /* populate the 'data' object */
+  /* e.g., data.table = $sp.getValue('table'); */
+
+})();]]></script>
+        <servicenow>false</servicenow>
+        <sys_class_name>sp_widget</sys_class_name>
+        <sys_created_by>irfan.wani</sys_created_by>
+        <sys_created_on>2026-02-21 16:09:41</sys_created_on>
+        <sys_id>f9b502003b9b3e50deb2090eb3e45a0b</sys_id>
+        <sys_mod_count>16</sys_mod_count>
+        <sys_name>Not Found</sys_name>
+        <sys_package display_value="Data Migration" source="x_sysus_data_mig_0">9977a0f8eb03f610084cfd50dad0cd43</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Data Migration">9977a0f8eb03f610084cfd50dad0cd43</sys_scope>
+        <sys_update_name>sp_widget_f9b502003b9b3e50deb2090eb3e45a0b</sys_update_name>
+        <sys_updated_by>irfan.wani</sys_updated_by>
+        <sys_updated_on>2026-03-31 15:57:32</sys_updated_on>
+        <template><![CDATA[<div class="error-404">
+  <!-- Full-screen background orbs -->
+  <div class="error-bg-circle purple"></div>
+  <div class="error-bg-circle pink"></div>
+  
+  <!-- FULL SCREEN BLUR CONTAINER -->
+  <div class="error-content">
+    <!-- Animated Search Icon -->
+    <div class="error-icon">
+      <svg viewBox="0 0 120 120" width="80" height="80">
+        <circle cx="60" cy="60" r="50" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.3)" stroke-width="3"/>
+        <circle cx="60" cy="60" r="35" fill="rgba(255,255,255,0.05)" stroke="#cbd5e1" stroke-width="2"/>
+        <path d="M85 85 L100 100 M75 40 Q85 30 95 40" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round" fill="none" stroke-dasharray="5,5"/>
+        <circle cx="60" cy="60" r="20">
+          <animate attributeName="r" values="20;22;20" dur="2s" repeatCount="indefinite"/>
+        </circle>
+      </svg>
+    </div>
+    
+    <!-- Glowing 404 -->
+    <div class="error-code">
+      <span>4</span>
+      <span class="glow">0</span>
+      <span class="glow">4</span>
+    </div>
+    
+    <!-- Text -->
+    <h1 class="error-title">Oops! Page Not Found</h1>
+    <p class="error-subtitle">Don't worry, we'll help you find your way back.</p>
+    
+    <!-- Action Buttons -->
+    <div class="error-actions">
+      <a href="/datamigration?id=dm_home" class="error-btn home-btn">
+        <svg viewBox="0 0 24 24" width="20" height="20" style="margin-right: 8px;">
+          <path fill="#fff" d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+        </svg>
+        Data Migration Home
+      </a>
+    </div>
+    
+    <!-- Footer -->
+    <div class="error-footer">
+      <small>Page <strong>{{data.page || 'unknown'}}</strong> doesn't exist</small>
+    </div>
+  </div>
+</div>
+]]></template>
+    </sp_widget>
+</record_update>

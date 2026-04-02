@@ -1,0 +1,1293 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_widget">
+    <sp_widget action="INSERT_OR_UPDATE">
+        <category>custom</category>
+        <client_script><![CDATA[api.controller = function($location,$window, spUtil, $scope, $timeout,spModal) {
+
+var c = this;
+c.showSnackbar = false;
+c.snackbarMessage = "";
+c.showConnectModal = false;
+c.showDeleteModal = false;
+	c.closeConnectModal = function() {
+    c.showConnectModal = false;
+};
+c.openSnackbar = function(message,instance) {
+    c.snackbarMessage = message;
+		c.snakbarName=instance;
+    c.showSnackbar = true;
+
+    // Auto hide after 3 sec
+    setTimeout(function() {
+        $scope.$apply(function() {
+            c.showSnackbar = false;
+        });
+    }, 3000);
+};
+
+/* =========================
+   DUPLICATE ALERT PROTECTION
+========================== */
+
+c.connectionLostAlertShown = false;
+c.connectionCreatedAlertShown = false;
+c.connectionUpdatedAlertShown = false;
+c.connectionDeletedAlertShown = false;
+
+
+/* =========================
+   EXISTING FUNCTION (UNCHANGED)
+========================== */
+
+c.setId = function(id,url,user,pass) {
+c.showConnectModal=false;
+$scope.server.get({
+    action: "check",
+    url: url,
+    user: user,
+    pass: pass,
+    sys_id: id
+}).then(function(response) {
+    if (response.data.success) {
+        // This is the "Immediate" part:
+        // Update the local list with the new states from the server
+       // c.data.connections = response.data.connections;
+        //c.openSnackbar("Connected Successfully");
+        //alert('Connected and States Updated!');
+        sessionStorage.setItem('currentId', id);
+			c.connectedSysId = id;
+			c.showConnectModal = true;
+			//$window.location.href="/datamigration?id=dm_browse_tables&sys_id="+id
+    } else {
+        alert("Connection failed: " + response.data.message);
+    }
+});
+
+
+c.createNotification({
+
+type: "connection_switched",
+
+title: "Connection switched",
+
+message: "Active source instance has been changed.",
+
+priority: "info"
+
+});
+
+};
+
+
+/* =========================
+   NOTIFICATION SYSTEM
+========================== */
+
+c.createNotification = function(notification) {
+
+$scope.server.get({
+
+action: "createNotification",
+
+payload: notification
+
+}).then(function() {
+
+$scope.$emit("notification.refresh");
+
+});
+
+};
+
+
+/* =========================
+   CONNECTION CREATED
+========================== */
+
+c.newConnectionCreated = function(instanceName) {
+
+if (c.connectionCreatedAlertShown)
+return;
+
+c.connectionCreatedAlertShown = true;
+
+c.createNotification({
+
+type: "connection_created",
+
+title: "New source connection created",
+
+message: "New connection added: " + instanceName,
+
+priority: "info"
+
+});
+
+};
+
+
+/* =========================
+   CONNECTION UPDATED
+========================== */
+
+c.connectionUpdated = function(instanceName) {
+
+if (c.connectionUpdatedAlertShown)
+return;
+
+c.connectionUpdatedAlertShown = true;
+
+c.createNotification({
+
+type: "connection_updated",
+
+title: "Source connection updated",
+
+message: "Configuration updated for: " + instanceName,
+
+priority: "warning"
+
+});
+
+};
+
+
+/* =========================
+   CONNECTION DELETED
+========================== */
+
+c.connectionDeleted = function(instanceName) {
+
+if (c.connectionDeletedAlertShown)
+return;
+
+c.connectionDeletedAlertShown = true;
+
+c.createNotification({
+
+type: "connection_deleted",
+
+title: "Source connection deleted",
+
+message: "Connection removed: " + instanceName,
+
+priority: "error"
+
+});
+
+};
+
+
+/* =========================
+   CONNECTION LOST DURING MIGRATION
+========================== */
+
+c.connectionLostDuringMigration = function(instanceName) {
+
+if (c.connectionLostAlertShown)
+return;
+
+c.connectionLostAlertShown = true;
+
+c.createNotification({
+
+type: "connection_lost",
+
+title: "Connection lost during migration",
+
+message: "Migration interrupted due to connection loss: " + instanceName,
+
+priority: "error"
+
+});
+
+};
+
+
+/* =========================
+   AUTO CONNECTION STATUS CHECK
+========================== */
+
+function monitorConnectionHealth() {
+
+$scope.server.get({
+
+action: "checkConnectionHealth"
+
+}).then(function(response) {
+
+
+if(response.data){
+
+/* LOST */
+
+if(response.data.connectionLost){
+
+c.connectionLostDuringMigration(
+
+response.data.instanceName
+
+);
+
+}else{
+
+c.connectionLostAlertShown = false;
+
+}
+
+
+/* CREATED */
+
+if(response.data.connectionCreated){
+
+c.newConnectionCreated(
+
+response.data.instanceName
+
+);
+
+}else{
+
+c.connectionCreatedAlertShown = false;
+
+}
+
+
+/* UPDATED */
+
+if(response.data.connectionUpdated){
+
+c.connectionUpdated(
+
+response.data.instanceName
+
+);
+
+}else{
+
+c.connectionUpdatedAlertShown = false;
+
+}
+
+
+/* DELETED */
+
+if(response.data.connectionDeleted){
+
+c.connectionDeleted(
+
+response.data.instanceName
+
+);
+
+}else{
+
+c.connectionDeletedAlertShown = false;
+
+}
+
+}
+
+});
+
+
+$timeout(monitorConnectionHealth, 20000);
+
+}
+	/*deleteFunction
+c.deleteConnection = function(id, name) {
+
+    spModal.confirm("Are you sure you want to delete this connection?")
+    .then(function(confirmed) {
+
+        if (!confirmed) return;
+
+        c.deletingId = id;
+
+        $scope.server.get({
+            action: "deleteRecord",
+            sys_id: id,
+            iName: name
+        }).then(function(response) {
+
+            c.deletingId = null;
+
+            if (response.data.success) {
+
+                // ✅ Reload fresh data from server
+                $scope.server.update().then(function(res){
+                    c.data.cons = res.data.cons;
+                });
+
+                c.connectionDeleted(name);
+                c.openSnackbar("Connection deleted successfully");
+
+            } else {
+                c.openSnackbar("Failed to delete connection", true);
+            }
+
+        });
+
+    });
+};*/
+	
+	
+	/* =========================
+   DELETE CONNECTION (CUSTOM MODAL)
+========================== */
+
+c.openDeleteModal = function(id, name) {
+    c.selectedId = id;
+    c.selectedConnectionName = name;
+    c.showDeleteModal = true;
+};
+
+c.closeModal = function() {
+    c.showDeleteModal = false;
+};
+
+c.confirmDelete = function() {
+
+    var id = c.selectedId;
+    var name = c.selectedConnectionName;
+
+    c.showDeleteModal = false;
+    c.deletingId = id;
+
+    $scope.server.get({
+        action: "deleteRecord",
+        sys_id: id,
+        iName: name
+    }).then(function(response) {
+
+        c.deletingId = null;
+
+        if (response.data.success) {
+
+            // ✅ Update UI instantly
+					sessionStorage.removeItem('currentId');
+            c.data.cons = c.data.cons.filter(function(item) {
+                return item.sys_id !== id;
+            });
+
+            c.connectionDeleted(name);
+            c.openSnackbar("Deleted successfully",name);
+
+        } else {
+            c.openSnackbar("Failed to delete connection", true);
+        }
+
+    });
+};
+/* START MONITORING */
+
+monitorConnectionHealth();
+
+};]]></client_script>
+        <controller_as>c</controller_as>
+        <css>.dm-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.dm-modal {
+  background: #fff;
+  border-radius: 16px;
+  padding: 25px;
+  width: 350px;
+  text-align: center;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+  animation: scaleIn 0.2s ease;
+}
+
+.dm-modal-icon {
+  color: #ef4444;
+  margin-bottom: 10px;
+}
+
+.dm-modal h3 {
+  margin: 10px 0;
+  font-size: 20px;
+}
+
+.dm-modal p {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.dm-modal-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+}
+.dm-modal-actions button{
+	flex:1;
+}
+.dm-btn.cancel {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.dm-btn.delete {
+  background: #ef4444;
+  color: #fff;
+}
+
+.dm-btn {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.dm-btn:hover {
+  opacity: 0.9;
+}
+.dm-btn.browse{
+  background:#4f46e5;
+  color:white;
+  text-decoration:none;
+  padding:10px 18px;
+  border-radius:8px;
+  font-weight:500;
+}
+
+.dm-btn.browse:hover{
+  background:#4338ca;
+}
+@keyframes scaleIn {
+  from { transform: scale(0.9); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+
+.dm-snackbar {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.3s ease;
+  z-index: 9999;
+}
+
+.dm-snackbar.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.snackbar-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  min-width: 320px;
+  max-width: 400px;
+  background: #eaf7ec;
+  border: 2px solid #22c55e;
+  border-radius: 12px;
+  padding: 16px 18px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+}
+
+.snackbar-icon {
+  color: #22c55e;
+  flex-shrink: 0;
+}
+
+.snackbar-title {
+  font-weight: 600;
+  font-size: 16px;
+  color: #1e293b;
+}
+
+.snackbar-desc {
+  font-size: 14px;
+  color: #475569;
+  margin-top: 4px;
+}
+/* ================================
+PAGE LAYOUT
+================================ */
+
+.dm-page-layout {
+  display: flex;
+  max-height: calc(100vh - 64px);
+position:relative;
+  background: linear-gradient(
+    to bottom right,
+    #ffffff 0%,
+    rgba(13, 124, 143, 0.05) 50%,
+    rgba(23, 162, 184, 0.10) 100%
+  );
+}
+
+.dm-sidebar-slot {
+   flex-basis: 260px;
+  flex-shrink:0;
+  height:100%;
+}
+
+.dm-wrapper {
+  position:relative;
+  display: flex;
+  flex-direction: column;
+  height:100%;
+  gap:30px;
+  margin: 0 auto;
+  overflow-y:auto;
+  height:calc(100vh - 64px);
+  width: 100%;
+  padding: 30px 15%;
+}
+@media(max-width:1600px){
+  .dm-wrapper{
+  	padding:30px;
+  }
+}
+
+/* ================================
+HEADER
+================================ */
+
+.dm-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+.dm-header h1 {
+  margin: 0;
+  font-size: 28px;
+}
+
+.dm-header p {
+  margin-top: 6px;
+  color: #64748b;
+}
+
+/* ================================
+PRIMARY BUTTON
+================================ */
+
+.dm-btn-primary {
+   background: linear-gradient(to right, #128a9a, #0a5f6d);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+  color: #fff;
+  border: none;
+  padding: 11px 18px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: .2s;
+}
+
+.dm-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(27,99,198,.35);
+}
+
+/* ================================
+BANNER
+================================ */
+
+.dm-banner {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  background: #eff6ff;
+  border: 1px solid #dbeafe;
+  color:#155DFC;
+  padding: 18px;
+  border-radius: 14px;
+  margin-bottom: 28px;
+}
+
+.dm-banner-icon {
+  font-size: 22px;
+  background: #EFF6FF;
+  padding: 8px 10px;
+  border-radius: 10px;
+}
+
+/* ================================
+GRID (RECTANGLE CARDS)
+================================ */
+
+.dm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(520px,1fr));
+  gap: 22px;
+}
+
+/* ================================
+CARD DESIGN
+================================ */
+
+.dm-card {
+  background: rgba(255,255,255,.9);
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 22px;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 12px 10px rgba(0,0,0,.06);
+  transition: .25s ease;
+  position: relative;
+  transform-style: preserve-3d;
+  will-change: transform, box-shadow;
+}
+
+/* MAIN HOVER EFFECT */
+
+.dm-card:hover {
+  transform: translateY(-10px) scale(1.02);
+  box-shadow:
+    0 0px 30px rgba(0,0,0,0.18),
+    0 0 0 1px rgba(255,255,255,0.6) inset;
+}
+
+/* GRADIENT BORDER GLOW */
+
+.dm-card::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: linear-gradient(
+    120deg,
+    rgba(11,101,115,.35),
+    rgba(11,101,115,.25),
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity .35s ease;
+  z-index: -1;
+}
+
+.dm-card:hover::before {
+  opacity: 1;
+}
+
+/* ================================
+CARD HEADER
+================================ */
+
+.dm-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  position: relative;
+  overflow: hidden;
+}
+
+.dm-card-header h3 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.dm-url {
+  font-size: 14px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+/* LIGHT SWEEP EFFECT */
+
+.dm-card-header::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 80%;
+  height: 100%;
+  background: linear-gradient(
+    110deg,
+    transparent,
+    rgba(255,255,255,.6),
+    transparent
+  );
+  transform: skewX(-20deg);
+}
+
+.dm-card:hover .dm-card-header::after {
+  animation: cardSweep .8s ease forwards;
+}
+
+@keyframes cardSweep {
+  to { left: 140%; }
+}
+
+/* ================================
+STATUS BADGE
+================================ */
+
+.dm-status {
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.dm-status.success {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.dm-status.danger {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.dm-card:hover .dm-status.success {
+  box-shadow: 0 0 14px rgba(34,197,94,.5);
+}
+
+.dm-card:hover .dm-status.danger {
+  box-shadow: 0 0 14px rgba(239,68,68,.4);
+}
+
+/* ================================
+CARD BODY
+================================ */
+
+.dm-card-body {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 18px;
+}
+
+.dm-info label {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.dm-info div {
+  font-weight: 500;
+  margin-top: 3px;
+}
+
+/* Divider */
+
+.dm-divider {
+  border: none;
+  border-top: 1px solid #e5e7eb;
+  margin: 18px 0;
+}
+
+/* ================================
+BUTTONS
+================================ */
+
+.dm-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.dm-btn {
+  border: none;
+  padding: 7px 14px;
+  border-radius: 9px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: .2s ease;
+  position: relative;
+}
+
+.dm-btn:active {
+  transform: scale(.95);
+}
+
+/* CONNECT */
+
+.dm-btn.connect {
+  background: #eff6ff;
+  color:#1F8C95;
+}
+
+.dm-btn.connect:hover {
+  background: #dbeafe;
+  box-shadow: 0 0 12px rgba(37,99,235,.35);
+}
+
+/* EDIT */
+
+.dm-btn.edit {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.dm-btn.edit:hover {
+  background: #e2e8f0;
+  transform: translateY(-1px);
+}
+
+/* DELETE */
+
+.dm-btn.delete {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.dm-btn.delete:hover {
+  background: #fecaca;
+  animation: dmPulse .6s ease;
+}
+
+@keyframes dmPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+/* ================================
+EMPTY STATE
+================================ */
+
+.dm-empty-state {
+  grid-column: 1/-1;
+  display: flex;
+  justify-content: center;
+}
+
+.dm-empty-card {
+  text-align: center;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  padding: 40px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+
+/* ================================
+PAGE FADE ANIMATION
+================================ */
+
+@keyframes dmFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}</css>
+        <data_table>sp_instance</data_table>
+        <demo_data/>
+        <description/>
+        <docs/>
+        <field_list/>
+        <has_preview>true</has_preview>
+        <id/>
+        <internal>false</internal>
+        <link><![CDATA[function link(scope, element, attrs, controller) {
+  
+}]]></link>
+        <name>Connection list_DM</name>
+        <option_schema/>
+        <public>false</public>
+        <roles/>
+        <script><![CDATA[(function() {
+
+    data.side = $sp.getWidget('dmm_sidebar');
+
+    data.cons = [];
+
+
+    /* =========================
+       CREATE NOTIFICATION HANDLER
+    ========================== */
+
+    if (input && input.action == "createNotification") {
+
+        var notif = new GlideRecord("x_sysus_data_mig_0_notifications");
+
+        notif.initialize();
+
+        notif.setValue("title", input.payload.title);
+        notif.setValue("message", input.payload.message);
+        notif.setValue("type", input.payload.type);
+        notif.setValue("priority", input.payload.priority);
+        notif.setValue("user", gs.getUserID());
+        notif.setValue("read", false);
+
+        notif.insert();
+
+        data.notificationCreated = true;
+
+        return;
+
+    }
+
+
+    /* =========================
+       CONNECTION HEALTH CHECK
+    ========================== */
+
+    if (input && input.action == "checkConnectionHealth") {
+
+        data.connectionLost = false;
+
+        var conn = new GlideRecord("x_sysus_data_mig_0_connection");
+
+        conn.addQuery("sys_created_by", gs.getUserName());
+        conn.query();
+
+        if (!conn.hasNext()) {
+
+            data.connectionLost = true;
+            data.instanceName = "Unknown instance";
+
+        }
+
+        return;
+
+    }
+
+
+    /* =========================
+       LOAD USER CONNECTION LIST
+       (UNCHANGED ORIGINAL LOGIC)
+    ========================== */
+
+    var gr = new GlideRecord('x_sysus_data_mig_0_connection');
+
+    gr.addQuery('sys_created_by', gs.getUserName());
+
+    gr.query();
+
+    while (gr.next()) {
+
+        data.cons.push({
+
+            name: gr.getValue('name'),
+            url: gr.getValue('url'),
+            user: gr.getValue('username'),
+            state: gr.getDisplayValue('state'),
+            date: gr.getDisplayValue('sys_updated_on'),
+            sys_id: gr.getUniqueValue(),
+						pass: gr.getValue('password')
+
+        });
+
+    }
+/* =========================
+       LOAD USER CONNECTION LIST
+       (UNCHANGED ORIGINAL LOGIC)
+    ========================== */
+
+if (input && input.action === "deleteRecord") {
+
+    var dr = new GlideRecord('x_sysus_data_mig_0_connection');
+
+    if (dr.get(input.sys_id)) {
+
+        // ]]>🔐<![CDATA[ Optional security check
+        if (dr.sys_created_by == gs.getUserName()) {
+
+            dr.deleteRecord();
+
+            data.success = true;
+        } else {
+            data.success = false;
+            data.msg = "Unauthorized";
+        }
+
+    } else {
+        data.success = false;
+        data.msg = "Record not found";
+    }
+}
+	//check connection status
+// Check connection status
+if (input && input.action == "check") {
+    data.success = false;
+
+    try {
+        var r = new sn_ws.RESTMessageV2();
+        r.setHttpMethod("get");
+        r.setEndpoint(input.url + "/api/now/table/sys_user?sysparm_limit=1");
+        r.setBasicAuth(input.user, input.pass);
+        r.setRequestHeader("Accept", "application/json");
+
+        var response = r.execute();
+        if (response.getStatusCode() == 200) {
+            var userName = gs.getUserName();
+
+            // 1. Bulk Deactivate others
+            var reset = new GlideRecord("x_sysus_data_mig_0_connection");
+            reset.addQuery("sys_created_by", userName);
+            reset.addQuery("sys_id", "!=", input.sys_id);
+            reset.query();
+					while(reset.next()){
+					 reset.setValue("state", false);
+            reset.update();	
+					}
+           
+
+            // 2. Activate current
+            var current = new GlideRecord("x_sysus_data_mig_0_connection");
+            if (current.get(input.sys_id)) {
+                current.setValue("state", true);
+                current.update();
+                data.success = true;
+            }
+            
+            // 3. RE-FETCH connections to send back to UI
+            data.connections = [];
+            var list = new GlideRecord("x_sysus_data_mig_0_connection");
+            list.addQuery("sys_created_by", userName);
+            list.query();
+            while(list.next()){
+                data.connections.push({
+                    sys_id: list.getUniqueValue(),
+                    state: list.getValue('state') == '1' || list.getValue('state') == 'true',
+                    name: list.getValue('name')
+                });
+            }
+        }
+    } catch (ex) {
+        data.error = ex.message;
+    }
+}
+    
+})();]]></script>
+        <servicenow>false</servicenow>
+        <sys_class_name>sp_widget</sys_class_name>
+        <sys_created_by>munaib.ashraf</sys_created_by>
+        <sys_created_on>2026-02-20 08:48:39</sys_created_on>
+        <sys_id>3427976bebcfb210084cfd50dad0cd7e</sys_id>
+        <sys_mod_count>312</sys_mod_count>
+        <sys_name>Connection list_DM</sys_name>
+        <sys_package display_value="Data Migration" source="x_sysus_data_mig_0">9977a0f8eb03f610084cfd50dad0cd43</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Data Migration">9977a0f8eb03f610084cfd50dad0cd43</sys_scope>
+        <sys_update_name>sp_widget_3427976bebcfb210084cfd50dad0cd7e</sys_update_name>
+        <sys_updated_by>irfan.wani</sys_updated_by>
+        <sys_updated_on>2026-04-01 18:33:35</sys_updated_on>
+        <template><![CDATA[<div class="dm-page-layout">
+    <!-- LEFT SIDEBAR -->
+
+    <div class="dm-sidebar-slot">
+        <sp-widget widget="data.side"></sp-widget>
+    </div>
+
+    <!-- Main Content -->
+
+    <div class="dm-wrapper">
+
+        <!-- Header -->
+
+        <div class="dm-header">
+            <div>
+                <h1>Connections</h1>
+
+                <p>Manage your ServiceNow instance connections</p>
+            </div>
+
+            <a class="dm-btn-primary" href="/datamigration?id=dm_connection">+ New Connection</a>
+        </div>
+
+        <!-- Info Banner -->
+
+        <div class="dm-banner">
+            <div class="dm-banner-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" class="lucide lucide-circle-alert-icon lucide-circle-alert">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" x2="12" y1="8" y2="12" />
+                    <line x1="12" x2="12.01" y1="16" y2="16" />
+                </svg></div>
+
+            <div class="dm-banner-text">
+                <strong>Secure Connection Storage</strong>
+                <p>
+                    Your connection credentials are encrypted and stored securely.
+                    You only need to configure them once.
+                </p>
+            </div>
+        </div>
+
+        <!-- Content Area -->
+
+        <div class="dm-grid">
+            <!-- EMPTY STATE -->
+
+            <div ng-if="!data.cons || data.cons.length === 0" class="dm-empty-state">
+                <div class="dm-empty-card">
+                    <div class="dm-empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="34" height="34"
+                            viewBox="0 0 24 24" fill="none" stroke="#0a5f6d" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" class="lucide lucide-unplug-icon lucide-unplug">
+                            <path d="m19 5 3-3" />
+                            <path d="m2 22 3-3" />
+                            <path d="M6.3 20.3a2.4 2.4 0 0 0 3.4 0L12 18l-6-6-2.3 2.3a2.4 2.4 0 0 0 0 3.4Z" />
+                            <path d="M7.5 13.5 10 11" />
+                            <path d="M10.5 16.5 13 14" />
+                            <path d="m12 6 6 6 2.3-2.3a2.4 2.4 0 0 0 0-3.4l-2.6-2.6a2.4 2.4 0 0 0-3.4 0Z" />
+                        </svg></div>
+
+                    <h3>No Connections Found</h3>
+
+                    <p>
+                        Get started by creating your first ServiceNow instance connection.
+                    </p>
+
+                    <a href="/datamigration?id=dm_connection" class="dm-btn-primary">
+                        + Create New Connection
+                    </a>
+                </div>
+            </div>
+
+            <!-- CONNECTION CARDS -->
+
+            <div ng-repeat="i in data.cons" class="dm-card"
+                ng-class="{'active-border': i.state == true || i.state == 'true'}">
+
+                <div class="dm-card-header">
+                    <div>
+                        <h3>{{i.name}}</h3>
+                        <div class="dm-url">{{i.url}}</div>
+                    </div>
+
+                    <span class="dm-status"
+                        ng-class="{'success': (i.state == true || i.state == 'true'), 'danger': (i.state == false || i.state == 'false')}">
+
+                        <i class="fa" ng-class="{'fa-check-circle': (i.state == true || i.state == 'true'),
+                      'fa-times-circle': (i.state == false || i.state == 'false')}"></i>
+
+                        {{(i.state == true || i.state == 'true') ? 'Active' : 'Inactive'}}
+                    </span>
+                </div>
+
+                <div class="dm-card-body">
+                    <div class="dm-info">
+                        <label>Username</label>
+                        <div>{{i.user}}</div>
+                    </div>
+
+                    <div class="dm-info">
+                        <label>Last Updated</label>
+                        <div>{{i.date}}</div>
+                    </div>
+                </div>
+
+                <hr class="dm-divider">
+
+                <div class="dm-actions">
+                    <button class="dm-btn connect" ng-click="c.setId(i.sys_id, i.url, i.user, i.pass)"
+                        ng-disabled="i.connecting">
+                        <i class="fa" ng-class="i.connecting ? 'fa-spinner fa-spin' : 'fa-plug'"></i>
+                        {{i.connecting ? 'Connecting...' : 'Connect'}}
+                    </button>
+
+                    <button class="dm-btn edit" ng-click="c.editConnection(i.sys_id)">
+                        <i class="fa fa-pencil"></i> Edit
+                    </button>
+
+                    <button class="dm-btn delete" ng-click="c.openDeleteModal(i.sys_id, i.name)"
+                        ng-disabled="c.deletingId === i.sys_id">
+                        <i class="fa" ng-class="c.deletingId === i.sys_id ? 'fa-spinner fa-spin' : 'fa-trash'"></i>
+                        {{c.deletingId === i.sys_id ? 'Deleting...' : 'Delete'}}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- 
+Snakbar starts here 
+!-->
+<div class="dm-snackbar" ng-class="{'show': c.showSnackbar}">
+    <div class="snackbar-box">
+
+        <div class="snackbar-icon">
+            <!-- Lucide Check Circle -->
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" stroke="currentColor"
+                stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M9 12l2 2 4-4"></path>
+            </svg>
+        </div>
+
+        <div class="snackbar-text">
+            <div class="snackbar-title">Success</div>
+            <div class="snackbar-desc">
+                {{c.snakbarName}} | {{c.snackbarMessage}}
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- 
+Delete and connection modals starts here
+!-->
+
+<div class="dm-modal-overlay" ng-if="c.showDeleteModal">
+    <div class="dm-modal">
+
+        <div class="dm-modal-icon">
+            <!-- Lucide Trash Icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="none" stroke="currentColor"
+                stroke-width="2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6l-1 14H6L5 6"></path>
+                <path d="M10 11v6"></path>
+                <path d="M14 11v6"></path>
+            </svg>
+        </div>
+
+        <h3>Delete Connection</h3>
+        <p>Are you sure you want to delete <b>{{c.selectedConnectionName}}</b>?</p>
+
+        <div class="dm-modal-actions">
+            <button class="dm-btn cancel" ng-click="c.closeModal()">Cancel</button>
+            <button class="dm-btn delete" ng-click="c.confirmDelete()">Delete</button>
+        </div>
+
+    </div>
+</div>
+
+
+<div class="dm-modal-overlay" ng-if="c.showConnectModal">
+    <div class="dm-modal">
+
+        <div class="dm-modal-icon success">
+            <!-- Lucide Check Icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="none" stroke="currentColor"
+                stroke-width="2">
+                <path d="M20 6L9 17l-5-5"></path>
+            </svg>
+        </div>
+
+        <h3>Connection Successful</h3>
+        <p>You are now connected to this instance.</p>
+
+        <div class="dm-modal-actions">
+
+            <button class="dm-btn cancel" ng-click="c.closeConnectModal()">Cancel</button>
+
+
+            <a class="dm-btn browse" ng-href="/datamigration?id=dm_browse_tables&sys_id={{c.connectedSysId}}">
+                Browse Tables
+            </a>
+
+        </div>
+
+    </div>
+</div>]]></template>
+    </sp_widget>
+</record_update>

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update sys_domain="global" table="sys_cb_topic">
+    <sys_cb_topic action="INSERT_OR_UPDATE">
+        <applicability/>
+        <applicability_mode>query</applicability_mode>
+        <autopilot_topic>false</autopilot_topic>
+        <category/>
+        <channels/>
+        <connect_queue/>
+        <context_profiles/>
+        <description/>
+        <dialog_acts_enabled>false</dialog_acts_enabled>
+        <expose_on_palette>false</expose_on_palette>
+        <flexible_conversation_switching>false</flexible_conversation_switching>
+        <foundational>false</foundational>
+        <graph>{"graph_api_version":"1.0.82","variables":{"664d438a9cfe412d9f119c62ae0d7657":{"category":"vaInputs","id":"664d438a9cfe412d9f119c62ae0d7657","label":"User","name":"user","table":"sys_user","varType":"reference"}},"goals":{"primary":{"id":"primary","trigger":{"type":"primary"},"name":"primary","applicability":"","description":"","nodes":{"81a6044da526418d8f2f45ecb1db5ce9":{"id":"81a6044da526418d8f2f45ecb1db5ce9","stepType":"Start","name":"Start","greetingResponse":{"mode":"simple","value":""}},"1580a4eaef4f433f82d28bc4a8b73425":{"id":"1580a4eaef4f433f82d28bc4a8b73425","stepType":"TerminateGoal","name":"End","confirmationMessage":{"mode":"simple","value":""}},"4ce6f9d635654a04bc4b1dd26c88365e":{"id":"4ce6f9d635654a04bc4b1dd26c88365e","stepType":"TextOutput","name":"Welcome message","secure":false,"value":[{"value":"(function execute() {\n    return gs.getMessageLang(\"Welcome to Now Virtual Agent. I'm here to help you. To begin, click Start or type hi. Anytime you want to start over, type restart.\", vaContext.getRequesterLang())\n})()\n","mode":"script"}],"isCollapsible":true,"requestFeedback":true,"applicability":{"value":"","mode":"query"}}},"edges":[{"id":"d5104e8cd3df443e95c26bbf385506e6","edgeType":"Edge","source":"4ce6f9d635654a04bc4b1dd26c88365e","target":"1580a4eaef4f433f82d28bc4a8b73425","sourcePort":"","targetPort":""},{"id":"0e4cbb5594c649e88f2a2e9a3891681a","edgeType":"Edge","source":"81a6044da526418d8f2f45ecb1db5ce9","target":"4ce6f9d635654a04bc4b1dd26c88365e","sourcePort":"","targetPort":""}]}}}</graph>
+        <key_phrases>Data Migration,_first_installation_</key_phrases>
+        <library>false</library>
+        <live_agent>false</live_agent>
+        <model_type>nlu_keyword</model_type>
+        <modify_confirmation_enabled>false</modify_confirmation_enabled>
+        <name>Data Migration</name>
+        <nlu_intent/>
+        <nlu_intent_label/>
+        <nlu_model/>
+        <nlu_model_label/>
+        <nlu_provider/>
+        <palette_label/>
+        <roles>public</roles>
+        <root_topic_id>3073d70953912210ee61833230e5e612</root_topic_id>
+        <secure_custom_input_control>false</secure_custom_input_control>
+        <source_topic_id>3073d70953912210ee61833230e5e612</source_topic_id>
+        <sys_class_name>sys_cb_topic</sys_class_name>
+        <sys_created_by>iqra.magray</sys_created_by>
+        <sys_created_on>2026-03-24 07:21:32</sys_created_on>
+        <sys_domain>global</sys_domain>
+        <sys_id>9b26fff53b373e10920bd84a85e45ab3</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>Data Migration</sys_name>
+        <sys_package display_value="Data Migration" source="x_sysus_data_mig_0">9977a0f8eb03f610084cfd50dad0cd43</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Data Migration">9977a0f8eb03f610084cfd50dad0cd43</sys_scope>
+        <sys_update_name>sys_cb_topic_9b26fff53b373e10920bd84a85e45ab3</sys_update_name>
+        <sys_updated_by>iqra.magray</sys_updated_by>
+        <sys_updated_on>2026-03-24 07:21:32</sys_updated_on>
+        <title/>
+        <triggerable_by_notification>false</triggerable_by_notification>
+        <type>STANDARD</type>
+    </sys_cb_topic>
+    <sys_translated_text action="delete_multiple" query="documentkey=9b26fff53b373e10920bd84a85e45ab3"/>
+</record_update>

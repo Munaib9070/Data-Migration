@@ -1,0 +1,2149 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_header_footer">
+    <sp_header_footer action="INSERT_OR_UPDATE">
+        <category>custom</category>
+        <client_script><![CDATA[api.controller = function($scope, $timeout){
+
+var c = this;
+
+	
+	/* ======================
+   INITIAL STATE
+====================== */
+
+c.notifications = [];
+c.unreadCount = 0;
+
+c.cart = [];
+c.cartCount = 0;
+
+c.showNotificationPanel = false;
+c.showCartPanel = false;
+
+$scope.showHelp = false;
+$scope.showMenu = false;
+
+/* ======================
+   CART TOGGLE
+====================== */
+
+c.toggleCart = function($event){
+
+if($event) $event.stopPropagation();
+
+c.showCartPanel = !c.showCartPanel;
+
+c.showNotificationPanel = false;
+$scope.showHelp = false;
+$scope.showMenu = false;
+
+if(c.showCartPanel){
+c.loadCart();
+}
+
+};
+
+
+/* ======================
+   HELP MODAL TOGGLE
+====================== */
+
+$scope.toggleHelp = function(){
+
+$scope.showHelp = !$scope.showHelp;
+
+$scope.showMenu = false;
+
+};
+
+
+/* ======================
+   PROFILE MENU TOGGLE
+====================== */
+
+$scope.toggleMenu = function(){
+
+$scope.showMenu = !$scope.showMenu;
+
+$scope.showHelp = false;
+
+};
+
+
+/* ======================
+   PROFILE NAVIGATION
+====================== */
+
+$scope.openProfile = function(){
+
+window.location.href = "/datamigration?id=dm_profile";
+
+};
+
+
+/* ======================
+   LOGOUT
+====================== */
+
+$scope.logout = function(){
+
+window.location.href = "/logout.do";
+
+};
+
+
+/* ======================
+   LOAD CART DATA
+====================== */
+
+c.loadCart = function(){
+
+var raw = JSON.parse(
+sessionStorage.getItem("migration_cart") || "[]"
+);
+
+var grouped = {};
+
+raw.forEach(function(item){
+
+if(!grouped[item.table]){
+
+grouped[item.table] = {
+
+name:item.table,
+label:item.label,
+records:[]
+
+};
+
+}
+
+grouped[item.table].records.push({
+
+number:item.number || item.sys_id,
+
+short_description:
+item.short_description || "",
+
+sys_id:item.sys_id
+
+});
+
+});
+
+c.cart = Object.keys(grouped).map(function(key){
+
+return grouped[key];
+
+});
+
+c.cartCount = raw.length;
+
+};
+
+
+/* ======================
+   LIVE CART UPDATE (SAME TAB)
+====================== */
+
+window.addEventListener("cartUpdated", function(){
+
+$scope.$applyAsync(function(){
+
+c.loadCart();
+
+});
+
+});
+
+
+/* ======================
+   CROSS TAB CART UPDATE
+====================== */
+
+window.addEventListener("storage", function(){
+
+$scope.$applyAsync(function(){
+
+c.loadCart();
+
+});
+
+});
+
+
+/* ======================
+   INITIAL CART LOAD
+====================== */
+
+$timeout(function(){
+
+c.loadCart();
+
+},100);
+
+
+/* ======================
+   OUTSIDE CLICK CLOSE
+====================== */
+
+angular.element(document).on("click", function(event){
+
+var insideCartModal =
+event.target.closest(".cart-modal");
+
+var insideCartIcon =
+event.target.closest(".cart");
+
+var insideNotification =
+event.target.closest(".notification-modal");
+
+var insideProfile =
+event.target.closest(".profile-wrapper");
+
+var insideHelp =
+event.target.closest(".help-modal");
+
+if(!insideCartModal &&
+   !insideCartIcon &&
+   !insideNotification &&
+   !insideProfile &&
+   !insideHelp){
+
+$scope.$applyAsync(function(){
+
+c.showCartPanel = false;
+c.showNotificationPanel = false;
+
+$scope.showHelp = false;
+$scope.showMenu = false;
+
+});
+
+}
+
+});
+
+
+/* ======================
+   LOAD NOTIFICATIONS
+====================== */
+
+c.loadNotifications = function(){
+
+c.server.get({
+
+action:"getNotifications"
+
+}).then(function(response){
+
+if(response.data.notifications){
+
+c.notifications = response.data.notifications;
+
+var count = 0;
+
+angular.forEach(c.notifications,function(n){
+
+if(!n.read) count++;
+
+});
+
+c.unreadCount = count;
+
+}
+
+});
+
+};
+
+
+/* ======================
+   TOGGLE NOTIFICATIONS
+====================== */
+
+c.toggleNotifications = function(){
+
+c.showNotificationPanel = !c.showNotificationPanel;
+
+c.showCartPanel = false;
+
+$scope.showHelp = false;
+$scope.showMenu = false;
+
+};
+
+
+/* ======================
+   MARK SINGLE READ
+====================== */
+
+c.markAsRead = function(notification){
+
+notification.read = true;
+
+if(c.unreadCount>0)
+c.unreadCount--;
+
+c.server.get({
+
+action:"markNotificationRead",
+id:notification.id
+
+});
+
+};
+
+
+/* ======================
+   MARK ALL READ
+====================== */
+
+c.markAllAsRead = function(){
+
+angular.forEach(c.notifications,function(n){
+
+n.read = true;
+
+});
+
+c.unreadCount = 0;
+
+c.server.get({
+
+action:"markAllNotificationsRead"
+
+});
+
+};
+
+
+/* ======================
+   NAVIGATE TO CART PAGE
+====================== */
+
+c.openCartPage = function(){
+
+var conn = sessionStorage.getItem("currentId");
+
+window.location.href =
+"?id=dm_cart&sys_id=" + conn;
+
+};
+
+
+/* ======================
+   AUTO REFRESH NOTIFICATIONS
+====================== */
+
+function notificationPolling(){
+
+c.loadNotifications();
+
+$timeout(notificationPolling,15000);
+
+}
+
+notificationPolling();
+
+
+};]]></client_script>
+        <controller_as>c</controller_as>
+        <css>*{
+	outline-style:none!important;
+}
+
+.dm-header{
+  height:64px;
+  background:#fff;
+  border-bottom:1px solid #e5e7eb;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:0 24px;
+  position:relative;
+    font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+}
+/* LOGO */
+.dm-logo{
+  display:flex;
+  align-items:center;
+  cursor:pointer;
+  text-decoration:none;
+}
+
+
+.dm-logo:focus,
+.dm-logo:active,
+.dm-logo:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+.dm-logo:hover
+{
+  transition: all 2s ease-out;
+}
+.dm-logo-icon{
+  width:38px;
+  height:38px;
+  background:#1F8C95;
+  color:#fff;
+  border-radius:10px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  margin-right:10px;
+}
+.dm-logo-text{
+	display:flex;
+  flex-direction:column;
+}
+.dm-title{font-weight:600; font-size:16px;color:#1F8C95;}
+.dm-sub{font-size:12px;color:#6b7280;}
+
+/* RIGHT */
+.dm-header-right{
+  display:flex;
+  align-items:center;
+  gap:20px;
+}
+
+.dm-icon{
+  font-size:18px;
+  display:flex;
+  color:#6b7280;
+  cursor:pointer;
+  position:relative;
+}
+
+
+
+.dm-icon:hover{color:#1F8C95;}
+
+.badge{
+  position:absolute;
+  top:-12px;
+  right:-12px;
+  background:#eb0017;
+  color:#fff;
+  font-size:12px;
+  padding:2px 5px;
+  border-radius:30%;
+}
+
+/* PROFILE */
+.profile-wrapper{position:relative;}
+
+.avatar{
+  width:36px;
+  height:36px;
+  border-radius:50%;
+  background:#d1d5db;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:600;
+  cursor:pointer;
+}
+
+.avatar.big{
+  width:48px;
+  height:48px;
+}
+
+.profile-dropdown{
+  position:absolute;
+  z-index:50;
+  right:0;
+  top:54px;
+  width:220px;
+  background:#fff;
+  border-radius:8px;
+  box-shadow:0 10px 30px rgba(0,0,0,.15);
+}
+
+.profile-info{
+  padding:15px;
+  display:flex;
+  align-items: center;
+  gap:12px;
+  border-bottom:1px solid #eee;
+}
+
+.menu-item{
+  padding:12px 16px;
+  cursor:pointer;
+}
+.menu-item:hover{background:#f3f4f6;}
+.logout{color:#dc2626;}
+
+/* HELP MODAL */
+.help-modal{
+  position:absolute;
+  z-index:50;
+  right:70px;
+  top:76px;
+  width:340px;
+  background:#fff;
+  border-radius:10px;
+  box-shadow:0 10px 30px rgba(0,0,0,.15);
+}
+
+.help-header{
+  padding:14px;
+  font-weight:600;
+  border-bottom:1px solid #eee;
+}
+
+.help-content{
+  padding:16px;
+  font-size:13px;
+}
+
+/* NOTIFICATIONS */
+.notification-modal{
+  position:absolute;
+  z-index:50;
+  right:80px;
+  top:64px;
+  width:320px;
+  background:#fff;
+  border-radius:10px;
+  box-shadow:0 10px 30px rgba(0,0,0,.15);
+}
+
+.notif-header{
+  padding:14px;
+  font-weight:600;
+  border-bottom:1px solid #eee;
+}
+
+.notif-item{
+  padding:12px;
+  border-bottom:1px solid #f1f1f1;
+}
+
+.empty-notif{
+  padding:20px;
+  text-align:center;
+  color:#9ca3af;
+}
+.unread {
+    background: #eef6ff;
+    font-weight: 600;
+}
+
+.mark-all {
+    float: right;
+    cursor: pointer;
+    font-size: 12px;
+    color: #007bff;
+}
+
+/* PANEL CONTAINER */
+
+.notification-modal{
+
+  position:absolute;
+  right:40px;
+  top:64px;
+
+  width:380px;
+  height:520px;
+
+  background:#fff;
+  border-radius:14px;
+
+  box-shadow:0 25px 60px rgba(0,0,0,.15);
+
+  display:flex;
+  flex-direction:column;
+
+  overflow:hidden;
+
+}
+
+
+/* HEADER BAR */
+
+.notif-header-bar{
+
+  background:linear-gradient(135deg,#1F8C95,#6366f1);
+
+  color:#fff;
+
+  padding:18px;
+
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+
+}
+
+
+.notif-header-left{
+
+  display:flex;
+  gap:12px;
+  align-items:center;
+
+}
+
+
+.notif-title-main{
+
+  font-weight:600;
+  font-size:18px;
+
+}
+
+
+.notif-sub{
+
+  font-size:12px;
+  opacity:.8;
+
+}
+
+
+.notif-close{
+
+  font-size:22px;
+  cursor:pointer;
+
+}
+
+
+/* ACTION BUTTONS */
+
+.notif-actions{
+
+  display:flex;
+  gap:12px;
+
+  padding:14px;
+
+  border-bottom:1px solid #eee;
+
+}
+
+
+.notif-btn{
+
+  flex:1;
+
+  border:none;
+
+  background:#f3f4f6;
+
+  padding:10px;
+
+  border-radius:8px;
+
+  cursor:pointer;
+
+  font-size:13px;
+
+}
+
+
+.notif-btn.secondary{
+
+  background:#e5e7eb;
+
+}
+
+
+/* SCROLLABLE LIST */
+
+.notif-list{
+
+  flex:1;
+
+  overflow-y:auto;
+
+  padding:14px;
+
+}
+
+
+/* PANEL */
+
+.notification-modal{
+
+  position:absolute;
+  right:40px;
+  top:64px;
+
+  width:420px;
+  height:640px;
+
+  background:#fff;
+
+  border-radius:14px;
+
+  box-shadow:0 25px 60px rgba(0,0,0,.18);
+
+  display:flex;
+  flex-direction:column;
+
+  overflow:hidden;
+
+}
+
+
+/* HEADER */
+
+.notif-header-bar{
+
+  background:#1F8C95;
+
+  color:#fff;
+
+  padding:20px;
+
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+
+}
+
+.notif-header-left{
+
+  display:flex;
+  gap:12px;
+  align-items:center;
+
+}
+
+
+.notif-bell-icon{
+
+  font-size:22px;
+
+}
+
+
+.notif-title-main{
+
+  font-size:20px;
+  font-weight:600;
+
+}
+
+
+.notif-sub{
+
+  font-size:13px;
+  opacity:.85;
+
+}
+
+
+.notif-close{
+
+  font-size:24px;
+  cursor:pointer;
+
+}
+
+
+/* ACTION BUTTON */
+
+.notif-actions{
+
+  padding:16px;
+  border-bottom:1px solid #eee;
+
+}
+
+
+.notif-btn{
+
+  width:100%;
+
+  background:#f3f4f6;
+
+  border:none;
+
+  padding:12px;
+
+  border-radius:10px;
+
+  font-size:14px;
+
+  cursor:pointer;
+
+}
+
+
+/* SCROLLABLE LIST */
+
+.notif-list{
+
+  flex:1;
+
+  overflow-y:auto;
+
+  padding:16px;
+
+}
+
+
+/* CARD */
+
+.notif-card{
+
+  position:relative;
+
+  display:flex;
+
+  gap:12px;
+
+  padding:16px;
+
+  border-radius:14px;
+
+  margin-bottom:14px;
+
+  border:1px solid #e5e7eb;
+
+  background:#fff;
+
+  cursor:pointer;
+
+  transition:.2s;
+
+}
+
+
+.notif-card:hover{
+
+  transform:translateY(-2px);
+
+}
+
+
+/* STATUS COLORS */
+
+.notif-card.success{
+
+  background:#ecfdf5;
+  border:1px solid #22c55e;
+
+}
+
+
+.notif-card.warning{
+
+  background:#fff7ed;
+  border:1px solid #f59e0b;
+
+}
+
+
+.notif-card.danger{
+
+  background:#fef2f2;
+  border:1px solid #ef4444;
+
+}
+
+
+.notif-card.info{
+
+  background:#eff6ff;
+  border:1px solid #3b82f6;
+
+}
+
+
+/* ICON */
+
+.notif-icon-wrapper{
+
+  font-size:22px;
+  margin-top:2px;
+
+}
+
+
+.text-success{color:#22c55e;}
+.text-warning{color:#f59e0b;}
+.text-danger{color:#ef4444;}
+.text-info{color:#3b82f6;}
+
+
+/* CONTENT */
+
+.notif-content{
+
+  flex:1;
+
+}
+
+
+.notif-card-title{
+
+  font-weight:600;
+
+}
+
+
+.notif-card-msg{
+
+  font-size:14px;
+  color:#6b7280;
+  margin-top:2px;
+
+}
+
+
+.notif-card-time{
+
+  font-size:12px;
+  color:#9ca3af;
+  margin-top:6px;
+
+}
+
+
+/* UNREAD BLUE DOT */
+
+.notif-dot{
+
+  position:absolute;
+
+  right:12px;
+  top:14px;
+
+  width:8px;
+  height:8px;
+
+  background:#1F8C95;
+
+  border-radius:50%;
+
+}
+
+
+/* EMPTY STATE */
+
+.empty-notif{
+
+  text-align:center;
+  margin-top:60px;
+  color:#9ca3af;
+
+}
+
+.notification-modal.right-drawer{
+
+position:fixed;
+
+top:0;
+right:0;
+
+width:420px;
+height:100vh;
+
+background:#fff;
+
+box-shadow:-10px 0 40px rgba(0,0,0,.15);
+
+transform:translateX(100%);
+
+transition:transform .35s ease;
+
+z-index:9999;
+
+display:flex;
+flex-direction:column;
+
+}
+
+.notification-modal.right-drawer.open{
+
+transform:translateX(0);
+
+}
+
+.drawer-overlay{
+
+position:fixed;
+
+top:0;
+left:0;
+
+width:100%;
+height:100vh;
+
+background:rgba(0,0,0,.35);
+
+z-index:9998;
+
+}
+.notification-modal.right-drawer{
+
+  position:fixed;
+
+  top:0;
+  right:16px;   /* 👈 creates visible right border space */
+
+  width:420px;
+  height:100vh;
+
+  background:#fff;
+
+  box-shadow:-10px 0 40px rgba(0,0,0,.15);
+
+  border-radius:12px 0 0 12px;  /* smooth left edges */
+
+  transform:translateX(110%);
+  transition:transform .35s ease;
+
+  z-index:9999;
+
+  display:flex;
+  flex-direction:column;
+
+}
+.notification-modal.right-drawer{
+
+  position:fixed;
+
+  top:12px;
+
+  right:16px;   /* ← creates space so curve becomes visible */
+
+  width:420px;
+
+  height:calc(100vh - 24px);
+
+  background:#ffffff;
+
+  border-radius:12px;  /* full rounded corners */
+
+  box-shadow:-10px 0 40px rgba(0,0,0,.15);
+
+  transform:translateX(120%);  /* adjusted for right spacing */
+
+  transition:transform .35s ease;
+
+  z-index:9999;
+
+  display:flex;
+  flex-direction:column;
+
+}
+.mark-read-btn{
+
+display:flex;
+align-items:center;
+gap:8px;
+
+background:#f3f4f6;
+
+color:#374151;
+
+border:none;
+
+padding:10px 16px;
+
+border-radius:8px;
+
+font-size:14px;
+
+cursor:pointer;
+
+transition:all .2s ease;
+
+}
+
+
+.mark-read-btn:hover{
+
+background:#1F8C95;
+
+color:#ffffff;
+
+}
+
+
+.mark-read-btn:hover svg{
+
+stroke:#ffffff;
+
+}
+.mark-read-btn:focus {
+
+outline: none;
+
+box-shadow: 0 0 0 2px rgba(71,100,211,.25);
+
+}.mark-read-btn:focus {
+
+outline: none;
+
+box-shadow: 0 0 0 2px rgba(71,100,211,.25);
+
+}
+
+/* ================= ERROR NOTIFICATION (FAILED CONNECTION) ================= */
+
+.notification-item.error {
+
+border: 1.5px solid #ef4444;
+
+background: #fee2e2;
+
+}
+
+.notification-item.error .notification-icon {
+
+color: #ef4444;
+
+}
+
+/* ================= CART MODAL ================= */
+
+.cart-overlay{
+
+position:fixed;
+top:0;
+left:0;
+
+width:100%;
+height:100vh;
+
+background:rgba(0,0,0,.15);
+
+z-index:9998;
+
+}
+
+
+/* ================= CART MODAL ================= */
+
+.cart-overlay{
+
+position:fixed;
+top:0;
+left:0;
+
+width:100%;
+height:100vh;
+
+background:rgba(0,0,0,.15);
+
+z-index:9998;
+
+}
+
+
+/* MAIN MODAL */
+
+.cart-modal{
+
+position:fixed;
+
+top:77px;
+
+right:150px;
+
+width:350px;
+
+height:360px;
+
+position:fixed;
+
+display:flex;
+
+flex-direction:column;
+
+background:#ffffff;
+
+border-radius:16px;
+
+box-shadow:0 30px 80px rgba(0,0,0,.18);
+
+padding:24px;
+
+z-index:9999;
+
+overflow:hidden;
+
+}
+
+
+/* HEADER */
+
+.cart-modal-header{
+
+font-size:20px;
+
+font-weight:600;
+
+display:flex;
+
+justify-content:space-between;
+
+align-items:center;
+
+margin-bottom:16px;
+
+}
+
+
+/* ITEM COUNT BADGE */
+
+.cart-count{
+
+font-size:13px;
+
+background:#f3f4f6;
+
+padding:4px 10px;
+
+border-radius:20px;
+
+}
+
+
+/* SCROLLABLE RECORD AREA */
+
+.cart-scroll-area{
+
+flex:1;
+
+overflow-y:auto;
+
+padding-right:6px;
+
+}
+
+
+/* RECORD GROUP CONTAINER */
+
+.cart-record-container{
+
+display:flex;
+
+flex-direction:column;
+
+gap:16px;
+
+}
+
+
+/* TABLE GROUP */
+
+.cart-table-group{
+
+width:100%;
+
+border:1px solid #e5e7eb;
+
+border-radius:12px;
+
+overflow:hidden;
+
+background:white;
+
+}
+
+
+/* TABLE HEADER */
+
+.cart-table-header{
+
+display:flex;
+
+justify-content:space-between;
+
+align-items:center;
+
+padding:12px 16px;
+
+background:#f3f4f6;
+
+font-size:14px;
+
+color:#374151;
+
+}
+
+
+/* TABLE COUNT BADGE */
+
+.cart-table-count{
+
+background:#1F8C95;
+
+color:white;
+
+padding:4px 12px;
+
+border-radius:20px;
+
+font-size:12px;
+
+}
+
+
+/* RECORD ROW */
+
+.cart-record-row{
+
+padding:14px 16px;
+
+border-top:1px solid #eee;
+
+}
+
+
+/* RECORD NUMBER */
+
+.cart-record-number{
+
+font-weight:600;
+
+color:#1F8C95;
+
+font-size:15px;
+
+}
+
+
+/* RECORD DESCRIPTION */
+
+.cart-record-desc{
+
+font-size:13px;
+
+color:#6b7280;
+
+margin-top:2px;
+
+}
+
+
+/* ACTION BUTTON */
+
+.cart-action-btn{
+
+margin-top:16px;
+
+/* align with inner card spacing */
+
+margin-left:12px;
+margin-right:12px;
+
+/* consistent width instead of full stretch */
+
+width:calc(100% - 24px);
+
+padding:14px;
+
+background:#1F8C95;
+
+color:white;
+
+border:none;
+
+border-radius:12px;
+
+font-size:15px;
+
+font-weight:600;
+
+cursor:pointer;
+
+flex-shrink:0;
+
+transition:.2s ease;
+
+}
+
+
+.cart-action-btn:hover{
+
+ background: linear-gradient(to right, #128a9a, #0a5f6d);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+  transition: all 2s ease-out;
+
+}
+/* ================= EMPTY CART STATE ================= */
+.cart-empty-state{
+
+position:absolute;
+
+top:50%;
+left:50%;
+
+transform:translate(-50%, -50%);
+
+display:flex;
+
+flex-direction:column;
+
+align-items:center;
+
+justify-content:center;
+
+text-align:center;
+
+gap:14px;
+
+width:100%;
+
+pointer-events:none;
+
+}
+
+
+.cart-empty-icon{
+
+width:110px;
+
+height:110px;
+
+border-radius:50%;
+
+background:#eef2f7;
+
+display:flex;
+
+align-items:center;
+
+justify-content:center;
+
+color:#1F8C95;
+
+}
+
+
+.cart-empty-title{
+
+font-size:22px;
+
+font-weight:600;
+
+color:#111827;
+
+}
+
+.cart-modal:hover{
+
+outline:2px solid #1F8C95;
+
+outline-offset:2px;
+
+box-shadow:
+
+0 35px 90px rgba(0,0,0,.22),
+
+0 0 0 4px rgba(31,140,149,.08);
+
+}
+.cart-empty-subtitle{
+
+font-size:14px;
+
+color:#6b7280;
+
+max-width:260px;
+
+line-height:1.5;
+
+}
+.cart-scroll-area {
+
+flex:1;
+
+overflow-y:auto;
+
+padding-right:4px;
+
+}</css>
+        <data_table>sp_instance</data_table>
+        <demo_data/>
+        <description/>
+        <docs/>
+        <field_list/>
+        <has_preview>true</has_preview>
+        <id/>
+        <internal>false</internal>
+        <link><![CDATA[function link(scope, element, attrs, controller) {
+  
+}]]></link>
+        <name>DMM_header</name>
+        <option_schema/>
+        <public>false</public>
+        <roles/>
+        <script><![CDATA[(function(){
+
+data.dt="";
+
+var user=gs.getUser();
+
+data.user={
+
+name:user.getDisplayName(),
+sys_id:user.getID()
+
+};
+
+
+/* INITIALS */
+
+var initials="";
+
+var parts=data.user.name.split(" ");
+
+for(var i=0;i<parts.length;i++)
+initials+=parts[i].charAt(0);
+
+data.user.initials=initials.substring(0,2).toUpperCase();
+
+
+/* GET NOTIFICATIONS */
+
+if(input && input.action=="getNotifications"){
+
+data.notifications=[];
+
+var notif=new GlideRecord("x_sysus_data_mig_0_notifications");
+
+notif.addQuery("user",gs.getUserID());
+
+notif.orderByDesc("sys_created_on");
+
+notif.setLimit(20);
+
+notif.query();
+
+while(notif.next()){
+
+data.notifications.push({
+
+id:notif.getUniqueValue(),
+title:notif.getValue("title"),
+message:notif.getValue("message"),
+priority:notif.getValue("priority"),
+read:notif.getValue("read")==true,
+time:notif.getDisplayValue("sys_created_on")
+
+});
+
+}
+
+return;
+
+}
+
+
+/* MARK SINGLE */
+
+if(input && input.action=="markNotificationRead"){
+
+var rec=new GlideRecord("x_sysus_data_mig_0_notifications");
+
+if(rec.get(input.id)){
+
+rec.read=true;
+rec.update();
+
+}
+
+return;
+
+}
+
+
+/* MARK ALL */
+
+if(input && input.action=="markAllNotificationsRead"){
+
+var recAll=new GlideRecord("x_sysus_data_mig_0_notifications");
+
+recAll.addQuery("user",gs.getUserID());
+
+recAll.addQuery("read",false);
+
+recAll.query();
+
+while(recAll.next()){
+
+recAll.read=true;
+recAll.update();
+
+}
+
+return;
+
+}
+
+
+/* CONNECTION STATUS 
+
+var chk = new GlideRecord('x_sysus_data_mig_0_connection');
+	chk.addQuery('state',true);
+	chk.addQuery('sys_created_by',gs.getUserName());
+	chk.query();
+	if(chk.next()){
+		data.dt = chk.getValue('name');
+	}
+
+*/
+/* DEMO FALLBACK */
+
+data.notifications=[];
+
+var gr=new GlideRecord("sys_journal_field");
+
+gr.addQuery("sys_created_by",user.getName());
+
+gr.orderByDesc("sys_created_on");
+
+gr.setLimit(5);
+
+gr.query();
+
+while(gr.next()){
+
+data.notifications.push({
+
+title:gr.getValue("value").substring(0,60),
+time:gr.getDisplayValue("sys_created_on")
+
+});
+
+}
+
+})();]]></script>
+        <servicenow>false</servicenow>
+        <static>false</static>
+        <sys_class_name>sp_header_footer</sys_class_name>
+        <sys_created_by>bareen.makhdoomi</sys_created_by>
+        <sys_created_on>2026-02-21 09:24:56</sys_created_on>
+        <sys_id>a2c8ecc03bdffa50deb2090eb3e45a99</sys_id>
+        <sys_mod_count>334</sys_mod_count>
+        <sys_name>DMM_header</sys_name>
+        <sys_package display_value="Data Migration" source="x_sysus_data_mig_0">9977a0f8eb03f610084cfd50dad0cd43</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Data Migration">9977a0f8eb03f610084cfd50dad0cd43</sys_scope>
+        <sys_update_name>sp_header_footer_a2c8ecc03bdffa50deb2090eb3e45a99</sys_update_name>
+        <sys_updated_by>irfan.wani</sys_updated_by>
+        <sys_updated_on>2026-04-01 07:05:58</sys_updated_on>
+        <template><![CDATA[<header class="dm-header">
+
+<a class="dm-logo" href="/datamigration">
+
+<span class="dm-logo-icon">
+<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+viewBox="0 0 24 24" fill="none" stroke="currentColor"
+stroke-width="2">
+<path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/>
+</svg>
+</span>
+
+<span class="dm-logo-text">
+<span class="dm-title">Data Migration</span>
+<span class="dm-sub">Manager</span>
+</span>
+
+</a>
+
+
+<div class="dm-header-right">
+
+<!-- ================= CART ICON ================= -->
+
+<div class="dm-icon cart"
+ng-click="c.toggleCart(); $event.stopPropagation()">
+
+<svg xmlns="http://www.w3.org/2000/svg"
+width="18"
+height="18"
+viewBox="0 0 24 24"
+fill="none"
+stroke="currentColor"
+stroke-width="2">
+
+<circle cx="8" cy="21" r="1"/>
+<circle cx="19" cy="21" r="1"/>
+<path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>
+
+</svg>
+
+<span class="badge"
+ng-if="c.cartCount > 0">
+
+{{c.cartCount}}
+
+</span>
+
+</div>
+
+
+<!-- ================= NOTIFICATIONS ================= -->
+
+<div class="dm-icon notification"
+ng-click="c.toggleNotifications(); $event.stopPropagation()">
+
+<svg xmlns="http://www.w3.org/2000/svg"
+width="18"
+height="18"
+viewBox="0 0 24 24"
+fill="none"
+stroke="currentColor"
+stroke-width="2">
+
+<path d="M10.268 21a2 2 0 0 0 3.464 0"/>
+<path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/>
+
+</svg>
+
+<span class="badge"
+ng-if="c.unreadCount > 0">
+
+{{c.unreadCount}}
+
+</span>
+
+</div>
+
+
+<!-- HELP -->
+
+<div class="dm-icon help"
+ng-click="toggleHelp(); $event.stopPropagation()">
+
+<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-question-mark-icon lucide-circle-question-mark"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+
+</div>
+
+
+
+<!-- PROFILE -->
+
+<div class="profile-wrapper">
+
+<div class="avatar"
+ng-click="toggleMenu(); $event.stopPropagation()">
+
+{{data.user.initials}}
+
+</div>
+
+
+<div class="profile-dropdown"
+ng-show="showMenu">
+
+<div class="profile-info">
+
+<div class="avatar big">
+{{data.user.initials}}
+</div>
+
+<div class="user-name">
+{{data.user.name}}
+</div>
+
+</div>
+
+
+<div class="menu-item"
+ng-click="openProfile()">
+Profile
+</div>
+
+
+<div class="menu-item logout"
+ng-click="logout()">
+Logout
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<!-- HELP MODAL -->
+
+<div class="help-modal" ng-show="showHelp">
+
+<div class="help-header">
+Data Migration Manager
+</div>
+
+<div class="help-content">
+
+<p>
+Data Migration Manager helps administrators migrate
+records securely between ServiceNow instances including
+incidents, tasks, attachments, and related lists.
+</p>
+
+<p>
+Use Connections, Migration Cart, Run Migration,
+History, and Settings pages to manage migrations.
+</p>
+
+</div>
+
+</div>
+<!-- ================= CART OVERLAY ================= -->
+
+<div class="cart-overlay"
+ng-show="c.showCartPanel"
+ng-click="c.showCartPanel=false">
+</div>
+
+
+<!-- ================= CART MODAL ================= -->
+
+<div class="cart-modal"
+ng-show="c.showCartPanel"
+ng-click="$event.stopPropagation()">
+
+
+<!-- HEADER -->
+
+<div class="cart-modal-header">
+
+<div class="cart-title">
+Migration Cart
+</div>
+
+<div class="cart-count">
+{{c.cartCount}} items
+</div>
+
+</div>
+
+
+<!-- ]]>🔥<![CDATA[ SCROLL AREA (THIS FIXES YOUR ISSUE) -->
+
+<div class="cart-scroll-area">
+
+
+<!-- RECORD LIST -->
+
+<div class="cart-record-container"
+ng-if="c.cartCount>0">
+
+
+<!-- TABLE GROUP -->
+
+<div class="cart-table-group"
+ng-repeat="table in c.cart">
+
+
+<!-- TABLE HEADER -->
+
+<div class="cart-table-header">
+
+<div class="cart-table-name">
+{{table.name}}
+</div>
+
+<div class="cart-table-count">
+{{table.records.length}} record(s)
+</div>
+
+</div>
+
+
+<!-- RECORD ROWS -->
+
+<div class="cart-record-row"
+ng-repeat="rec in table.records">
+
+<div class="cart-record-info">
+
+<div class="cart-record-number">
+{{rec.number}}
+</div>
+
+<div class="cart-record-desc">
+{{rec.short_description}}
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+
+<!-- EMPTY STATE -->
+
+<div class="cart-empty-state"
+ng-if="c.cartCount==0">
+
+<div class="cart-empty-icon">
+
+<svg xmlns="http://www.w3.org/2000/svg"
+width="42"
+height="42"
+viewBox="0 0 24 24"
+fill="none"
+stroke="currentColor"
+stroke-width="2">
+
+<circle cx="8" cy="21" r="1"/>
+<circle cx="19" cy="21" r="1"/>
+<path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>
+
+</svg>
+
+</div>
+
+<div class="cart-empty-title">
+Your cart is empty
+</div>
+
+</div>
+
+
+</div>
+
+
+<!-- BUTTON -->
+
+<button class="cart-action-btn"
+ng-if="c.cartCount>0"
+ng-click="c.openCartPage()">
+
+View Cart & Migrate
+
+</button>
+
+
+</div>
+
+<!-- NOTIFICATION DRAWER -->
+
+<div class="notification-modal right-drawer"
+ng-class="{'open': c.showNotificationPanel}"
+ng-click="$event.stopPropagation()">
+
+
+<!-- HEADER -->
+
+<div class="notif-header-bar">
+
+<div class="notif-header-left">
+
+<i class="fa fa-bell notif-bell-icon"></i>
+
+<div>
+
+<div class="notif-title-main">
+Notifications
+</div>
+
+<div class="notif-sub">
+{{c.unreadCount}} unread messages
+</div>
+
+</div>
+
+</div>
+
+
+<div class="notif-close"
+ng-click="c.showNotificationPanel=false">
+
+×
+
+</div>
+
+</div>
+
+
+<!-- ACTION BUTTON -->
+
+<div class="notif-actions">
+
+<button class="notif-btn mark-read-btn"
+ng-click="c.markAllAsRead()">
+
+<svg xmlns="http://www.w3.org/2000/svg"
+width="18"
+height="18"
+viewBox="0 0 24 24"
+fill="none"
+stroke="currentColor"
+stroke-width="2"
+stroke-linecap="round"
+stroke-linejoin="round">
+
+<path d="M18 6 7 17l-5-5"/>
+<path d="m22 10-7.5 7.5L13 16"/>
+
+</svg>
+
+<span>Mark All Read</span>
+
+</button>
+
+</div>
+
+
+<!-- LIST -->
+
+<div class="notif-list">
+
+
+<div class="notif-card"
+     ng-repeat="n in c.notifications"
+ng-class="[
+  !n.read && (
+    n.priority=='success' ? 'success' :
+    n.priority=='warning' ? 'warning' :
+    n.priority=='error' ? 'danger' :
+    n.priority=='critical' ? 'danger' :
+    n.priority=='info' ? 'info' :
+    ''
+  ),
+  n.read ? 'read-card' : ''
+]"
+     ng-click="c.markAsRead(n)">
+
+
+<div class="notif-dot"
+     ng-if="!n.read"></div>
+
+
+<!-- ICONS -->
+
+<div class="notif-icon-wrapper">
+
+
+<!-- INFO (BLUE) -->
+
+<svg ng-if="n.priority=='info'"
+xmlns="http://www.w3.org/2000/svg"
+width="22"
+height="22"
+viewBox="0 0 24 24"
+fill="none"
+stroke="#3b82f6"
+stroke-width="2"
+stroke-linecap="round"
+stroke-linejoin="round">
+
+<circle cx="12" cy="12" r="10"/>
+<path d="M12 16v-4"/>
+<path d="M12 8h.01"/>
+
+</svg>
+
+
+<!-- WARNING (YELLOW) -->
+
+<svg ng-if="n.priority=='warning'"
+xmlns="http://www.w3.org/2000/svg"
+width="22"
+height="22"
+viewBox="0 0 24 24"
+fill="none"
+stroke="#f59e0b"
+stroke-width="2"
+stroke-linecap="round"
+stroke-linejoin="round">
+
+<circle cx="12" cy="12" r="10"/>
+<line x1="12" x2="12" y1="8" y2="12"/>
+<line x1="12" x2="12.01" y1="16" y2="16"/>
+
+</svg>
+
+
+<!-- SUCCESS (GREEN) -->
+
+<svg ng-if="n.priority=='success'"
+xmlns="http://www.w3.org/2000/svg"
+width="22"
+height="22"
+viewBox="0 0 24 24"
+fill="none"
+stroke="#22c55e"
+stroke-width="2"
+stroke-linecap="round"
+stroke-linejoin="round">
+
+<circle cx="12" cy="12" r="10"/>
+<path d="m9 12 2 2 4-4"/>
+
+</svg>
+
+
+<!-- FAILED (RED) -->
+
+<svg ng-if="n.priority=='error'"
+xmlns="http://www.w3.org/2000/svg"
+width="22"
+height="22"
+viewBox="0 0 24 24"
+fill="none"
+stroke="#ef4444"
+stroke-width="2"
+stroke-linecap="round"
+stroke-linejoin="round">
+
+<circle cx="12" cy="12" r="10"/>
+<path d="m15 9-6 6"/>
+<path d="m9 9 6 6"/>
+
+</svg>
+
+
+</div>
+
+
+
+
+<div class="notif-content">
+
+<div class="notif-card-title">
+{{n.title}}
+</div>
+
+
+<div class="notif-card-msg"
+ng-if="n.message">
+{{n.message}}
+</div>
+
+
+<div class="notif-card-time">
+{{n.time}}
+</div>
+
+</div>
+
+</div>
+
+
+<div class="empty-notif"
+ng-if="!c.notifications.length">
+
+No notifications
+
+</div>
+
+
+</div>
+
+</div>
+
+
+</header>]]></template>
+    </sp_header_footer>
+</record_update>

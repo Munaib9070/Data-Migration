@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_analytics_bucket">
+    <sys_analytics_bucket action="INSERT_OR_UPDATE">
+        <analytics_channel display_value="web">6496ef61c7001010393d265c95c260b9</analytics_channel>
+        <application_name>Data Migration</application_name>
+        <bucket_document_id>7c789a973b47f650deb2090eb3e45a8b</bucket_document_id>
+        <bucket_metadata/>
+        <bucket_metadata_customer_override/>
+        <bucket_table_name>sp_portal</bucket_table_name>
+        <bucket_type/>
+        <enable_unauthenticated_user_tracking>false</enable_unauthenticated_user_tracking>
+        <enabled>true</enabled>
+        <internal_name_for_index>x_sysus_data_mig_0.sp_portal.7c789a973b47f650deb2090eb3e45a8b</internal_name_for_index>
+        <sys_class_name>sys_analytics_bucket</sys_class_name>
+        <sys_created_by>irfan.wani</sys_created_by>
+        <sys_created_on>2026-02-19 09:38:47</sys_created_on>
+        <sys_id>00295ed73b47f650deb2090eb3e45a86</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>Data Migration</sys_name>
+        <sys_package display_value="Data Migration" source="x_sysus_data_mig_0">9977a0f8eb03f610084cfd50dad0cd43</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Data Migration">9977a0f8eb03f610084cfd50dad0cd43</sys_scope>
+        <sys_update_name>sys_analytics_bucket_00295ed73b47f650deb2090eb3e45a86</sys_update_name>
+        <sys_updated_by>irfan.wani</sys_updated_by>
+        <sys_updated_on>2026-02-19 09:38:47</sys_updated_on>
+    </sys_analytics_bucket>
+</record_update>

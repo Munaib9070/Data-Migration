@@ -1,0 +1,646 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>x_sysus_data_mig_0.UnifiedMigrationEngine</api_name>
+        <caller_access/>
+        <client_callable>false</client_callable>
+        <description/>
+        <mobile_callable>false</mobile_callable>
+        <name>UnifiedMigrationEngine</name>
+        <sandbox_callable>false</sandbox_callable>
+        <script><![CDATA[var UnifiedMigrationEngine = Class.create();
+UnifiedMigrationEngine.prototype = {
+
+    initialize: function() {
+
+        this._migratedRecords = {};
+        this._visited = {};
+        this._cacheRefFields = {};
+        this._sourceCache = {};
+        this._childCache = {};
+        this._relatedListCache = {};
+        this.stats = {
+            total: 0,
+            inserted: 0,
+            updated: 0,
+            failed: 0
+        };
+
+        this.SOURCE_URL = '';
+        this.SOURCE_USER = '';
+        this.SOURCE_PSWD = '';
+
+        this.MAX_RECURSION = 20;
+    },
+
+    /* ================= CONNECTION ================= */
+
+    initConnection: function(url, user, pass) {
+        this.SOURCE_URL = url;
+        this.SOURCE_USER = user;
+        this.SOURCE_PSWD = pass;
+    },
+
+    //copy attachments
+    copyAttachments: function(parentTable, sourceId, targetId) {
+
+        try {
+
+            /* =========================
+               STEP 1: GET SOURCE ATTACHMENTS
+            ========================== */
+
+            var listReq = new sn_ws.RESTMessageV2();
+
+            listReq.setEndpoint(
+                this.SOURCE_URL +
+                "/api/now/table/sys_attachment" +
+                "?sysparm_query=" +
+                encodeURIComponent(
+                    "table_name=" + parentTable +
+                    "^table_sys_id=" + sourceId
+                )
+            );
+
+            listReq.setHttpMethod("GET");
+            listReq.setBasicAuth(this.SOURCE_USER, this.SOURCE_PSWD);
+
+            var listResp = listReq.execute();
+
+            if (listResp.getStatusCode() != 200) {
+                gs.error("❌ Failed to fetch attachment list");
+                return;
+            }
+
+            var attachments = JSON.parse(listResp.getBody()).result || [];
+
+            gs.info("]]>📎<![CDATA[ Found " + attachments.length + " attachments");
+
+            /* =========================
+               STEP 2: LOOP ATTACHMENTS
+            ========================== */
+
+            for (var i = 0; i < attachments.length; i++) {
+
+                var att = attachments[i];
+
+                try {
+
+                    /* -------------------------
+                       DUPLICATE CHECK
+                    ------------------------- */
+
+                    var existing = new GlideRecord("sys_attachment");
+                    existing.addQuery("table_name", parentTable);
+                    existing.addQuery("table_sys_id", targetId);
+                    existing.addQuery("file_name", att.file_name);
+                    existing.query();
+
+                    if (existing.next()) {
+                        gs.info("⏭ Skipping duplicate: " + att.file_name);
+                        continue;
+                    }
+
+                    /* -------------------------
+                       DOWNLOAD + SAVE
+                    ------------------------- */
+
+                    var fileReq = new sn_ws.RESTMessageV2();
+
+                    fileReq.setEndpoint(
+                        this.SOURCE_URL +
+                        "/api/now/attachment/" +
+                        att.sys_id +
+                        "/file"
+                    );
+
+                    fileReq.setHttpMethod("GET");
+                    fileReq.setBasicAuth(this.SOURCE_USER, this.SOURCE_PSWD);
+
+                    fileReq.setRequestHeader("Accept", "*/*");
+
+                    fileReq.setRequestHeader("Accept-Encoding", "identity");
+
+                    fileReq.saveResponseBodyAsAttachment(
+                        parentTable,
+                        targetId,
+                        att.file_name
+                    );
+
+                    var fileResp = fileReq.execute();
+
+                    if (fileResp.getStatusCode() != 200) {
+                        gs.warn("⚠️ Failed to download: " + att.file_name);
+                        continue;
+                    }
+
+                    /* -------------------------
+                       STEP 3: FIX METADATA
+                    ------------------------- */
+
+                    var newAtt = new GlideRecord("sys_attachment");
+                    newAtt.addQuery("table_name", parentTable);
+                    newAtt.addQuery("table_sys_id", targetId);
+                    newAtt.addQuery("file_name", att.file_name);
+                    newAtt.orderByDesc("sys_created_on");
+                    newAtt.setLimit(1);
+                    newAtt.query();
+
+                    if (newAtt.next()) {
+
+                        newAtt.setWorkflow(false);
+                        newAtt.autoSysFields(false);
+
+                        // preserve original metadata
+                        if (att.sys_created_on)
+                            newAtt.setValue("sys_created_on", att.sys_created_on);
+
+                        if (att.sys_created_by)
+                            newAtt.setValue("sys_created_by", att.sys_created_by);
+
+                        newAtt.update();
+
+                        gs.info("✅ Attachment migrated: " + att.file_name);
+                    }
+
+                } catch (innerErr) {
+
+                    gs.error("❌ Attachment failed: " + att.file_name);
+                    gs.error(innerErr);
+
+                }
+            }
+
+        } catch (e) {
+
+            gs.error("❌ Attachment migration crashed");
+            gs.error(e);
+
+        }
+    },
+    /* ================= MAIN ================= */
+
+    migrateRecord: function(table, sysId) {
+
+        sysId = String(sysId).trim();
+
+        gs.info("]]>🚀<![CDATA[ START MIGRATION: " + table + "/" + sysId);
+
+        var targetId = this.migrateWithDependencies(table, sysId, 0);
+
+        if (targetId) {
+            this.copyAttachments(table, sysId, targetId);
+            this.insertSLAs(sysId, targetId);
+            this.migrateRelatedLists(table, sysId, targetId);
+        }
+
+        return targetId;
+    },
+
+    /* ================= BATCH ================= */
+
+    batchMigration: function(source_url, username, password, tableRecords) {
+
+        if (!tableRecords || typeof tableRecords !== "object") {
+            gs.warn("⚠️ Invalid batch input");
+            return {};
+        }
+
+        this.initConnection(source_url, username, password);
+
+        var results = {};
+
+        gs.info("]]>🚀<![CDATA[ STARTING BATCH MIGRATION");
+
+        for (var table in tableRecords) {
+
+            var ids = tableRecords[table];
+            if (!Array.isArray(ids) || ids.length === 0)
+                continue;
+
+            results[table] = {};
+
+            for (var i = 0; i < ids.length; i++) {
+
+                var srcId = String(ids[i]).trim();
+                if (!srcId)
+                    continue;
+
+                try {
+
+                    this._visited = {};
+                    this._migratedRecords = {};
+
+                    var targetId = this.migrateRecord(table, srcId);
+
+                    results[table][srcId] = targetId || "FAILED";
+
+                    gs.info("✔ Completed: " + srcId);
+
+                } catch (e) {
+
+                    gs.error("❌ Failed: " + srcId);
+                    gs.error(e);
+
+                    results[table][srcId] = "FAILED";
+                }
+            }
+        }
+
+        gs.info("]]>🎉<![CDATA[ BATCH COMPLETE");
+        return results;
+    },
+
+    /* ================= DEPENDENCY ================= */
+
+    migrateWithDependencies: function(table, sysId, depth) {
+
+        depth = depth || 0;
+
+        if (depth > this.MAX_RECURSION)
+            return '';
+
+        var key = table + "_" + sysId;
+
+        if (this._migratedRecords[key])
+            return this._migratedRecords[key];
+
+        if (this._visited[key])
+            return sysId;
+
+        this._visited[key] = true;
+
+        var record = this.fetchSourceRecord(table, sysId);
+        if (!record)
+            return '';
+
+        var refFields = this._getCachedRefFields(table);
+
+        for (var i = 0; i < refFields.length; i++) {
+
+            var rf = refFields[i];
+
+            if (!rf.refTable || !record[rf.field])
+                continue;
+
+            var srcRef = this.normalizeRef(record[rf.field]);
+            if (!srcRef)
+                continue;
+
+            try {
+
+                var targetRef = this.migrateWithDependencies(
+                    rf.refTable,
+                    srcRef,
+                    depth + 1
+                );
+
+                if (targetRef)
+                    record[rf.field] = targetRef;
+
+            } catch (e) {
+                gs.warn("⚠️ Ref failed: " + rf.field);
+            }
+        }
+
+        var targetId = this.safeUpsert(record, table, record.sys_id, true);
+
+        this._migratedRecords[key] = targetId;
+
+        return targetId;
+    },
+
+
+    /* ================= FETCH RECORD ================= */
+
+    fetchSourceRecord: function(table, sysId) {
+
+        var key = table + "_" + sysId;
+
+        if (this._sourceCache[key])
+            return this._sourceCache[key];
+
+        var api = new sn_ws.RESTMessageV2();
+        var baseUrl = this.SOURCE_URL.replace(/\/+$/, '');
+
+        api.setEndpoint(
+            baseUrl + "/api/now/table/" + table + "/" + sysId +
+            "?sysparm_display_value=false"
+        );
+
+        api.setHttpMethod("GET");
+        api.setBasicAuth(this.SOURCE_USER, this.SOURCE_PSWD);
+
+        var res = api.execute();
+
+        if (res.getStatusCode() != 200)
+            return null;
+
+        var data = JSON.parse(res.getBody());
+
+        this._sourceCache[key] = data.result;
+
+        return data.result;
+    },
+
+    /* ================= REF FIELDS ================= */
+
+    getReferenceFields: function(table) {
+
+        var api = new sn_ws.RESTMessageV2();
+
+        var baseUrl = this.SOURCE_URL.replace(/\/+$/, '');
+
+        api.setEndpoint(
+            baseUrl +
+            "/api/now/table/sys_dictionary" +
+            "?sysparm_query=" +
+            encodeURIComponent("name=" + table + "^internal_type=reference") +
+            "&sysparm_fields=element,reference"
+        );
+
+        api.setHttpMethod("GET");
+        api.setBasicAuth(this.SOURCE_USER, this.SOURCE_PSWD);
+
+        var response = api.execute();
+
+        if (response.getStatusCode() != 200)
+            return [];
+
+        var data = JSON.parse(response.getBody());
+
+        var refs = [];
+
+        for (var i = 0; i < data.result.length; i++) {
+
+            var refTable = data.result[i].reference;
+
+            /* ]]>🔥<![CDATA[ FIX HERE */
+            if (typeof refTable === "object") {
+                refTable = refTable.value || refTable.display_value;
+            }
+
+            refTable = String(refTable || "").trim();
+
+            if (!refTable)
+                continue;
+
+            refs.push({
+                field: data.result[i].element,
+                refTable: refTable
+            });
+        }
+
+        return refs;
+    },
+
+    _getCachedRefFields: function(table) {
+
+        if (!this._cacheRefFields[table])
+            this._cacheRefFields[table] = this.getReferenceFields(table);
+
+        return this._cacheRefFields[table];
+    },
+
+    /* ================= RELATED LIST ================= */
+
+    discoverRelatedLists: function(parentTable) {
+
+        if (this._relatedListCache[parentTable])
+            return this._relatedListCache[parentTable];
+
+        var rel = [];
+
+        var api = new sn_ws.RESTMessageV2();
+        var baseUrl = this.SOURCE_URL.replace(/\/+$/, '');
+
+        api.setEndpoint(
+            baseUrl + "/api/now/table/sys_dictionary" +
+            "?sysparm_query=" + encodeURIComponent("internal_type=reference^reference=" + parentTable) +
+            "&sysparm_fields=name,element"
+        );
+
+        api.setHttpMethod("GET");
+        api.setBasicAuth(this.SOURCE_USER, this.SOURCE_PSWD);
+
+        var res = api.execute();
+
+        if (res.getStatusCode() == 200) {
+
+            var data = JSON.parse(res.getBody());
+
+            for (var i = 0; i < data.result.length; i++) {
+                rel.push({
+                    childTable: data.result[i].name,
+                    refField: data.result[i].element
+                });
+            }
+        }
+
+        // rel.push({
+        //     childTable: "sys_attachment",
+        //     refField: "table_sys_id"
+        // });
+        rel.push({
+            childTable: "sys_journal_field",
+            refField: "element_id"
+        });
+        rel.push({
+            childTable: "task_sla",
+            refField: "task"
+        });
+
+        this._relatedListCache[parentTable] = rel;
+
+        return rel;
+    },
+
+    fetchChildren: function(childTable, refField, parentTable, parentSysId) {
+
+        var key = childTable + "_" + parentSysId;
+
+        if (this._childCache[key])
+            return this._childCache[key];
+
+        var api = new sn_ws.RESTMessageV2();
+        var baseUrl = this.SOURCE_URL.replace(/\/+$/, '');
+
+        var query = refField + "=" + parentSysId;
+
+        if (childTable == "sys_attachment")
+            query = "table_sys_id=" + parentSysId + "^table_name=" + parentTable;
+
+        if (childTable == "sys_journal_field")
+            query = "element_id=" + parentSysId + "^name=" + parentTable;
+
+        api.setEndpoint(
+            baseUrl + "/api/now/table/" + childTable +
+            "?sysparm_query=" + encodeURIComponent(query) +
+            "&sysparm_limit=10000"
+        );
+
+        api.setHttpMethod("GET");
+        api.setBasicAuth(this.SOURCE_USER, this.SOURCE_PSWD);
+
+        var res = api.execute();
+
+        if (res.getStatusCode() != 200)
+            return [];
+
+        var data = JSON.parse(res.getBody());
+
+        this._childCache[key] = data.result || [];
+
+        return this._childCache[key];
+    },
+
+    migrateRelatedLists: function(parentTable, sourceId, targetId) {
+
+        var lists = this.discoverRelatedLists(parentTable);
+
+        for (var i = 0; i < lists.length; i++) {
+
+            var rl = lists[i];
+
+            var children = this.fetchChildren(
+                rl.childTable,
+                rl.refField,
+                parentTable,
+                sourceId
+            );
+
+            for (var j = 0; j < children.length; j++) {
+
+                var child = children[j];
+
+                try {
+
+                    if (rl.refField)
+                        child[rl.refField] = targetId;
+
+                    this.safeUpsert(child, rl.childTable, child.sys_id, false);
+
+                } catch (e) {
+                    gs.warn("⚠️ Related failed: " + rl.childTable);
+                }
+            }
+        }
+
+        /* APPROVALS */
+
+        var approvals = this.fetchChildren(
+            "sysapproval_approver",
+            "sysapproval",
+            "",
+            sourceId
+        );
+
+        for (var a = 0; a < approvals.length; a++) {
+
+            var appr = approvals[a];
+            appr.sysapproval = targetId;
+
+            this.safeUpsert(appr, "sysapproval_approver", appr.sys_id, false);
+        }
+    },
+
+    /* ================= SLA ================= */
+
+    insertSLAs: function(sourceTask, targetTask) {
+
+        var slas = this.fetchChildren("task_sla", "task", "task", sourceTask);
+
+        for (var i = 0; i < slas.length; i++) {
+
+            var sla = slas[i];
+            sla.task = targetTask;
+
+            this.safeUpsert(sla, "task_sla", sla.sys_id, false);
+        }
+    },
+
+    /* ================= UPSERT ================= */
+
+    safeUpsert: function(payload, table, sysId, countStats) {
+
+        countStats = (countStats !== false); // default true
+
+        var gr = new GlideRecord(table);
+        var isUpdate = sysId && gr.get(sysId);
+
+        if (!isUpdate) {
+            gr.initialize();
+            if (sysId)
+                gr.setNewGuidValue(sysId);
+        }
+
+        gr.setWorkflow(false);
+        gr.setUseEngines(false);
+        gr.autoSysFields(false);
+
+        for (var f in payload) {
+
+            if (!gr.isValidField(f))
+                continue;
+
+            if (f == "sys_id" || f == "password")
+                continue;
+
+            var v = payload[f];
+
+            if (v && typeof v === "object" && v.value)
+                v = v.value;
+
+            try {
+                gr.setValue(f, v);
+            } catch (e) {}
+        }
+
+        var result = null;
+
+        try {
+
+            if (isUpdate) {
+                result = gr.update();
+                if (result && countStats) this.stats.updated++;
+            } else {
+                result = gr.insert();
+                if (result && countStats) this.stats.inserted++;
+            }
+
+            if (countStats) this.stats.total++;
+
+        } catch (e) {
+            if (countStats) this.stats.failed++;
+            return null;
+        }
+
+        if (!result && countStats) this.stats.failed++;
+
+        return result;
+    },
+
+    normalizeRef: function(v) {
+        if (!v) return '';
+        if (typeof v === "object" && v.value)
+            return v.value;
+        return String(v).trim();
+    },
+
+    type: "UnifiedMigrationEngine"
+};]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>faizan.latief</sys_created_by>
+        <sys_created_on>2026-03-25 09:21:19</sys_created_on>
+        <sys_id>f32bddd63b3bbe10920bd84a85e45a3e</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>UnifiedMigrationEngine</sys_name>
+        <sys_package display_value="Data Migration" source="x_sysus_data_mig_0">9977a0f8eb03f610084cfd50dad0cd43</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Data Migration">9977a0f8eb03f610084cfd50dad0cd43</sys_scope>
+        <sys_update_name>sys_script_include_f32bddd63b3bbe10920bd84a85e45a3e</sys_update_name>
+        <sys_updated_by>faizan.latief</sys_updated_by>
+        <sys_updated_on>2026-03-25 09:21:19</sys_updated_on>
+    </sys_script_include>
+</record_update>

@@ -1,0 +1,1642 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_widget">
+    <sp_widget action="INSERT_OR_UPDATE">
+        <category>custom</category>
+        <client_script><![CDATA[api.controller = function($scope, $timeout) {
+ 
+  var c = this;
+ 
+  /* ---------------- INITIAL STATE ---------------- */
+ 
+  c.records = [];
+
+  c.activeTab = "tables";
+
+  c.view = "tables";
+
+  c.selectedTable = null;
+ 
+  c.showFilter = false;
+
+  c.filterQuery = "";
+ 
+  c.previewOpen = false;
+
+  c.previewData = {};
+ 
+  c.selectAll = false;
+ 
+  /* =========================
+
+     CART HELPERS
+
+  ==========================*/
+ 
+  // Check if record already exists in queue
+
+  c.isInCart = function(number){
+ 
+    var cart = JSON.parse(sessionStorage.getItem("migration_cart") || "[]");
+ 
+    for(var i=0;i<cart.length;i++){
+
+      if(cart[i].number == number)
+
+        return true;
+
+    }
+ 
+    return false;
+
+  };
+ 
+  // Optional cart counter
+
+  c.getCartCount = function(){
+ 
+    var cart = JSON.parse(sessionStorage.getItem("migration_cart") || "[]");
+
+    return cart.length;
+ 
+  };
+ 
+ 
+  /* ---------------- OPEN TABLE ---------------- */
+ 
+  c.openTable = function(table) {
+ 
+    c.selectedTable = table;
+
+    c.view = "records";
+ 
+    c.filterQuery = "";
+
+    c.showFilter = false;
+ 
+    c.loadRecords();
+
+  };
+ 
+ 
+  /* ---------------- LOAD RECORDS ---------------- */
+ 
+  c.loadRecords = function() {
+ 
+    if (!c.selectedTable)
+
+      return;
+ 
+    c.server.get({
+
+      action: "getRecords",
+
+      table: c.selectedTable.name,
+
+      query: c.filterQuery
+
+    }).then(function(response) {
+ 
+      if (response.data && response.data.records)
+
+        c.records = response.data.records;
+
+      else
+
+        c.records = [];
+ 
+    });
+
+  };
+ 
+	
+ 
+  /* ---------------- BACK TO TABLE LIST ---------------- */
+ 
+  c.backToTables = function() {
+ 
+    c.view = "tables";
+
+    c.selectedTable = null;
+
+    c.records = [];
+
+    c.filterQuery = "";
+
+    c.showFilter = false;
+
+  };
+ 
+ 
+  // ==================================================
+
+  // FILTER SYSTEM
+
+  // ==================================================
+ 
+  c.filterConditions = [{
+
+    field: '',
+
+    operator: '=',
+
+    value: '',
+
+    condition: 'AND'
+
+  }];
+ 
+  c.toggleFilter = function() {
+
+    c.showFilter = !c.showFilter;
+
+  };
+ 
+  c.addCondition = function(type) {
+ 
+    c.filterConditions.push({
+
+      field: '',
+
+      operator: '=',
+
+      value: '',
+
+      condition: type || 'AND'
+
+    });
+
+  };
+ 
+  c.removeCondition = function(i) {
+
+    c.filterConditions.splice(i, 1);
+
+  };
+ 
+  c.clearAllFilters = function() {
+ 
+    c.filterConditions = [{
+
+      field: '',
+
+      operator: '=',
+
+      value: '',
+
+      condition: 'AND'
+
+    }];
+ 
+    c.getRecords();
+
+  };
+ 
+  c.getStateValue = function(label) {
+ 
+    var map = {
+
+      'New': '1',
+
+      'In Progress': '2',
+
+      'On Hold': '3',
+
+      'Resolved': '6',
+
+      'Closed': '7',
+
+      'Canceled': '8'
+
+    };
+ 
+    return map[label] || label;
+
+  };
+ 
+  c.applyFilters = function() {
+ 
+    var queryParts = [];
+ 
+    c.filterConditions.forEach(function(f, index) {
+ 
+      if (!f.field || f.value === '')
+
+        return;
+ 
+      var value = f.value;
+ 
+      if (f.field === 'state')
+
+        value = c.getStateValue(f.value);
+ 
+      var part = f.field + f.operator + value;
+ 
+      if (index > 0)
+
+        part = f.condition + part;
+ 
+      queryParts.push(part);
+
+    });
+ 
+    var encodedQuery = queryParts.join('^');
+ 
+    c.getRecords(encodedQuery);
+ 
+    c.showFilter = false;
+
+  };
+ 
+ 
+  // ==================================================
+
+  // LOAD RECORDS
+
+  // ==================================================
+ 
+  c.getRecords = function(encodedQuery) {
+ 
+    c.server.get({
+
+      action: "getRecords",
+
+      table: c.selectedTable.name,
+
+      query: encodedQuery || ''
+
+    }).then(function(response) {
+ 
+      c.records = response.data.records || [];
+
+    });
+
+  };
+ 
+ 
+  // ==================================================
+
+  // CART FUNCTIONS
+
+  // ==================================================
+ 
+  /* Add single record */
+ 
+  c.addSingleToCart = function(record){
+
+c.showSnackbar(record.number +" has been added to your migration cart.");
+
+    var cart = JSON.parse(sessionStorage.getItem("migration_cart") || "[]");
+ 
+    // Prevent duplicate
+
+    if(c.isInCart(record.number)){
+
+      c.showSnackbar(record.number + " already exists in queue.");
+
+      return;
+
+    }
+ 
+    cart.push({
+
+      table: c.selectedTable.name,
+
+      label: c.selectedTable.label,
+
+      number: record.number,
+
+      short_description: record.short_description,
+
+      size: 1.5,
+			//sys_id: record.sys_id
+
+    });
+ 
+    sessionStorage.setItem("migration_cart", JSON.stringify(cart));
+ 
+    
+
+  };
+ 
+ 
+  /* Add selected records */
+ 
+  c.addSelectedToCart = function(){
+ 
+    var cart = JSON.parse(sessionStorage.getItem("migration_cart") || "[]");
+ 
+    var count = 0;
+ 
+    angular.forEach(c.records, function(r){
+ 
+      if(r.selected){
+ 
+        if(!c.isInCart(r.number)){
+ 
+          cart.push({
+
+            table: c.selectedTable.name,
+
+            label: c.selectedTable.label,
+
+            number: r.number,
+
+            short_description: r.short_description,
+
+            size: 1.5,
+						sys_id: record.sys_id
+
+          });
+ 
+          count++;
+ 
+        }
+ 
+      }
+ 
+    });
+ 
+    sessionStorage.setItem("migration_cart", JSON.stringify(cart));
+ 
+    if(count > 0){
+
+      c.showSnackbar(count + " records added to your migration cart.");
+
+    } else {
+
+      c.showSnackbar("Selected records already exist in queue.");
+
+    }
+ 
+  };
+
+// Cart Counter in Sidebar	
+
+c.getCartCount = function(){
+ 
+  var cart = JSON.parse(sessionStorage.getItem("migration_cart") || "[]");
+ 
+  return cart.length;
+ 
+};
+ 
+  /* Add preview record */
+ 
+  c.addPreviewToCart = function() {
+ 
+    var cart = JSON.parse(sessionStorage.getItem("migration_cart") || "[]");
+ 
+    if(c.isInCart(c.previewData.number)){
+
+      c.showSnackbar(c.previewData.number + " already exists in cart.");
+
+      return;
+
+    }
+ 
+    cart.push({
+
+      table: c.selectedTable.name,
+
+      label: c.selectedTable.label,
+
+      number: c.previewData.number,
+
+      short_description: c.previewData.short_description,
+
+      size: 1.5
+
+    });
+ 
+    sessionStorage.setItem("migration_cart", JSON.stringify(cart));
+ 
+    c.showSnackbar(c.previewData.number + " has been added to your migration queue.");
+
+  };
+ 
+ 
+  // ==================================================
+
+  // PREVIEW MODAL
+
+  // ==================================================
+ 
+  c.openPreview = function(record) {
+
+    c.previewData = record;
+
+    c.previewOpen = true;
+
+  };
+ 
+  c.closePreview = function() {
+
+    c.previewOpen = false;
+
+  };
+ 
+ 
+  // ==================================================
+
+  // SELECT ALL
+
+  // ==================================================
+ 
+  c.toggleAll = function() {
+ 
+    c.selectAll = !c.selectAll;
+ 
+    angular.forEach(c.records, function(record) {
+
+      record.selected = c.selectAll;
+
+    });
+
+  };
+ 
+  c.syncSelectAllState = function() {
+ 
+    var allSelected = true;
+ 
+    angular.forEach(c.records, function(record) {
+ 
+      if (!record.selected)
+
+        allSelected = false;
+
+    });
+ 
+    c.selectAll = allSelected;
+
+  };
+ 
+ 
+  // ==================================================
+
+  // SNACKBAR
+
+  // ==================================================
+ 
+  c.showSnackbar = function(message){
+ 
+    c.snackMessage = message;
+
+    c.showSnack = true;
+ 
+    $timeout(function(){
+
+      c.showSnack = false;
+
+    }, 3000);
+ 
+  };
+ 
+};
+ 
+]]></client_script>
+        <controller_as>c</controller_as>
+        <css>.browse-layout {&#13;
+  display: flex;&#13;
+  min-height: 100vh;&#13;
+  background: #f5f7fb;&#13;
+}&#13;
+&#13;
+/* BACK BUTTON */&#13;
+.back-link {&#13;
+  display: inline-flex;&#13;
+  align-items: center;&#13;
+  gap: 6px;&#13;
+  color: #6b7280;&#13;
+  text-decoration: none;&#13;
+  font-size: 14px;&#13;
+  margin-bottom: 10px;&#13;
+  transition: all 0.2s ease;&#13;
+}&#13;
+&#13;
+.back-link i {&#13;
+  font-size: 12px;&#13;
+  transition: transform 0.2s ease;&#13;
+}&#13;
+&#13;
+.back-link:hover {&#13;
+  color: #2d63b8;&#13;
+}&#13;
+&#13;
+.back-link:hover i {&#13;
+  transform: translateX(-3px);&#13;
+}&#13;
+/* Bulk Actions Container */&#13;
+.bulk-actions {&#13;
+  display: flex;&#13;
+  gap: 8px;&#13;
+  align-items: center;&#13;
+  margin-left: auto;&#13;
+}&#13;
+&#13;
+/* Bulk Button Base */&#13;
+.bulk-btn {&#13;
+  padding: 10px 16px;&#13;
+  font-weight: 600;&#13;
+  border-radius: 8px;&#13;
+  border: none;&#13;
+  cursor: pointer;&#13;
+  font-size: 14px;&#13;
+  transition: all 0.2s ease;&#13;
+  display: flex;&#13;
+  align-items: center;&#13;
+  gap: 6px;&#13;
+  min-height: 42px;&#13;
+}&#13;
+&#13;
+.bulk-btn:hover {&#13;
+  transform: translateY(-1px);&#13;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);&#13;
+}&#13;
+&#13;
+/* Add to Queue (Blue) */&#13;
+.add-btn.bulk-btn {&#13;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);&#13;
+}&#13;
+&#13;
+/* Migrate Now (Orange/Red Gradient) */&#13;
+.migrate-btn {&#13;
+  background: linear-gradient(135deg, #f59e0b, #d97706);&#13;
+  color: white;&#13;
+}&#13;
+&#13;
+.migrate-btn:hover {&#13;
+  background: linear-gradient(135deg, #d97706, #b45309);&#13;
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);&#13;
+}&#13;
+&#13;
+/* Selected Count Badge */&#13;
+.selected-count {&#13;
+  background: #eff6ff;&#13;
+  color: #1e40af;&#13;
+  padding: 6px 12px;&#13;
+  border-radius: 20px;&#13;
+  font-size: 13px;&#13;
+  font-weight: 500;&#13;
+  margin-left: 10px;&#13;
+}&#13;
+&#13;
+/* Responsive */&#13;
+@media (max-width: 768px) {&#13;
+  .record-search {&#13;
+    flex-direction: column;&#13;
+    gap: 12px;&#13;
+  }&#13;
+  .bulk-actions {&#13;
+    width: 100%;&#13;
+    justify-content: center;&#13;
+  }&#13;
+}&#13;
+&#13;
+&#13;
+/* Sidebar slot */&#13;
+.dm-sidebar-slot {&#13;
+  width: 260px;&#13;
+  flex-shrink: 0;&#13;
+  background: #ffffff;&#13;
+  border-right: 1px solid #e5e7eb;&#13;
+  position: sticky;&#13;
+  top: 0;&#13;
+  height: 100vh;&#13;
+  z-index: 5;&#13;
+}&#13;
+&#13;
+/* Main content area */&#13;
+.browse-wrapper {&#13;
+  flex: 1;&#13;
+  padding: 25px 30px;&#13;
+  overflow: auto;&#13;
+}&#13;
+&#13;
+/* ================= WRAPPER ================= */&#13;
+.browse-wrapper {&#13;
+  padding: 25px 30px;&#13;
+  background: #f5f7fb;&#13;
+  font-family: "Segoe UI", sans-serif;&#13;
+}&#13;
+&#13;
+/* ================= HEADER ================= */&#13;
+.page-header h2 {&#13;
+  font-size: 24px;&#13;
+  font-weight: 700;&#13;
+  color: #1f2d3d;&#13;
+  margin-bottom: 4px;&#13;
+}&#13;
+&#13;
+.page-header p {&#13;
+  color: #6b7280;&#13;
+  font-size: 14px;&#13;
+  margin-bottom: 18px;&#13;
+}&#13;
+&#13;
+/* ================= CONNECTION BANNER ================= */&#13;
+.connection-banner {&#13;
+  background: #e9f8ef;&#13;
+  border: 1px solid #b6e3c7;&#13;
+  color: #1f7a3f;&#13;
+  padding: 12px 16px;&#13;
+  border-radius: 8px;&#13;
+  margin-bottom: 18px;&#13;
+  font-size: 14px;&#13;
+}&#13;
+&#13;
+/* ================= TABS ================= */&#13;
+.tabs {&#13;
+  display: inline-flex;&#13;
+  background: #e5e7eb;&#13;
+  border-radius: 10px;&#13;
+  padding: 4px;&#13;
+  margin-bottom: 20px;&#13;
+}&#13;
+&#13;
+.tab {&#13;
+  padding: 8px 18px;&#13;
+  font-size: 14px;&#13;
+  border-radius: 8px;&#13;
+  color: #4b5563;&#13;
+  cursor: pointer;&#13;
+  display: flex;&#13;
+  align-items: center;&#13;
+  gap: 6px;&#13;
+  transition: all 0.2s ease;&#13;
+}&#13;
+&#13;
+.tab i {&#13;
+  font-size: 13px;&#13;
+}&#13;
+&#13;
+.tab.active {&#13;
+  background: #ffffff;&#13;
+  color: #111827;&#13;
+  font-weight: 600;&#13;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08);&#13;
+}&#13;
+&#13;
+/* ================= TABLE GRID ================= */&#13;
+.cards-grid {&#13;
+  display: grid;&#13;
+  grid-template-columns: repeat(3, 1fr);&#13;
+  gap: 18px;&#13;
+}&#13;
+&#13;
+/* ================= CARD ================= */&#13;
+.table-card {&#13;
+  background: #e2e2e2;&#13;
+  border-radius: 12px;&#13;
+  padding: 22px 20px;&#13;
+  border: 1px solid #e5e7eb;&#13;
+  transition: 0.2s ease;&#13;
+  height: 180px;&#13;
+  cursor: pointer;&#13;
+&#13;
+  position: relative; /* FIX */&#13;
+  overflow: hidden; /* required for shine */&#13;
+}&#13;
+&#13;
+.table-card:hover {&#13;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.12);&#13;
+  transform: translateY(-4px);&#13;
+}&#13;
+&#13;
+/*Browse button*/&#13;
+.browse-btn {&#13;
+  position: absolute;&#13;
+  bottom: 16px;&#13;
+  left: 50%;&#13;
+  transform: translateX(-50%) translateY(10px);&#13;
+&#13;
+  padding: 8px 16px;&#13;
+  font-size: 13px;&#13;
+  font-weight: 600;&#13;
+  border-radius: 6px;&#13;
+  border: none;&#13;
+  cursor: pointer;&#13;
+  width:90%;&#13;
+&#13;
+  background: #1b63c6;&#13;
+  color: #fff;&#13;
+&#13;
+  opacity: 0;&#13;
+  transition: all 0.3s ease;&#13;
+}&#13;
+&#13;
+/* Show on hover */&#13;
+.table-card:hover .browse-btn {&#13;
+  opacity: 1;&#13;
+  transform: translateX(-50%) translateY(0);&#13;
+}&#13;
+&#13;
+/* COUNT BADGE */&#13;
+.count {&#13;
+  position: absolute;&#13;
+  top: 16px;&#13;
+  right: 16px;&#13;
+  font-size: 12px;&#13;
+  background: #f3f4f6;&#13;
+  padding: 8px 8px;&#13;
+  border-radius: 999px;&#13;
+  color: #374151;&#13;
+  font-weight: 600;&#13;
+}&#13;
+&#13;
+/* REMOVE THIS if exists */&#13;
+.title {&#13;
+  font-size: 16px;&#13;
+  font-weight: 600;&#13;
+  color: #111827;&#13;
+  margin-top: 0; /* 🔥 key fix */&#13;
+}&#13;
+&#13;
+/* TABLE NAME */&#13;
+.name {&#13;
+  font-size: 12px;&#13;
+  color: #6b7280;&#13;
+  margin-top: 4px;&#13;
+}&#13;
+&#13;
+/* ================= QUICK SEARCH WRAPPER ================= */&#13;
+.quick-search-wrapper {&#13;
+  background: #ffffff;&#13;
+  border-radius: 12px;&#13;
+  padding: 28px;&#13;
+  border: 1px solid #e5e7eb;&#13;
+}&#13;
+&#13;
+/* SEARCH BAR */&#13;
+.search-bar {&#13;
+  background: #f3f4f6;&#13;
+  border-radius: 8px;&#13;
+  padding: 12px 14px;&#13;
+  display: flex;&#13;
+  align-items: center;&#13;
+  gap: 10px;&#13;
+  margin-bottom: 40px;&#13;
+}&#13;
+&#13;
+.search-bar i {&#13;
+  color: #9ca3af;&#13;
+}&#13;
+&#13;
+.search-bar input {&#13;
+  border: none;&#13;
+  background: transparent;&#13;
+  outline: none;&#13;
+  width: 100%;&#13;
+  font-size: 14px;&#13;
+  color: #111827;&#13;
+}&#13;
+&#13;
+.search-bar input::placeholder {&#13;
+  color: #9ca3af;&#13;
+}&#13;
+&#13;
+/*add cart styling*/&#13;
+/* ADD TO CART BUTTON */&#13;
+.add-btn {&#13;
+  background: #2563eb;&#13;
+  border: none;&#13;
+  color: white;&#13;
+  padding: 8px 14px;&#13;
+  border-radius: 6px;&#13;
+  font-weight: 500;&#13;
+  cursor: pointer;&#13;
+  position: relative;&#13;
+  overflow: hidden;&#13;
+}&#13;
+&#13;
+&#13;
+/* Shine Sweep Effect */&#13;
+.add-btn::before {&#13;
+  content: "";&#13;
+  position: absolute;&#13;
+  top: 0;&#13;
+  left: -120%;&#13;
+  width: 120%;&#13;
+  height: 100%;&#13;
+  background: linear-gradient(&#13;
+    120deg,&#13;
+    transparent,&#13;
+    rgba(255,255,255,0.4),&#13;
+    transparent&#13;
+  );&#13;
+  transition: 0.6s ease;&#13;
+}&#13;
+/* When record is already in cart */&#13;
+.in-cart-btn{&#13;
+  background:#22c55e !important;&#13;
+  color:white !important;&#13;
+}&#13;
+&#13;
+/* Hover animation */&#13;
+.add-btn:hover::before {&#13;
+  left: 120%;&#13;
+}&#13;
+&#13;
+/* Extra glow */&#13;
+.add-btn:hover {&#13;
+  box-shadow: 0 8px 20px rgba(27, 99, 198, 0.35);&#13;
+}&#13;
+&#13;
+/* ================= EMPTY STATE ================= */&#13;
+.search-empty {&#13;
+  text-align: center;&#13;
+  color: #6b7280;&#13;
+  padding: 40px 0 20px;&#13;
+}&#13;
+&#13;
+.search-empty .big-icon {&#13;
+  font-size: 52px;&#13;
+  color: #d1d5db;&#13;
+  margin-bottom: 10px;&#13;
+}&#13;
+&#13;
+.search-empty h3 {&#13;
+  color: #111827;&#13;
+  font-size: 18px;&#13;
+  margin-bottom: 6px;&#13;
+}&#13;
+&#13;
+.search-empty p {&#13;
+  font-size: 14px;&#13;
+}&#13;
+&#13;
+/* ========================================&#13;
+   ULTRA CARD HOVER EFFECT&#13;
+======================================== */&#13;
+&#13;
+/* Smooth perspective feel */&#13;
+.table-card {&#13;
+  transform-style: preserve-3d;&#13;
+  will-change: transform, box-shadow;&#13;
+  overflow: hidden;&#13;
+  position: relative;&#13;
+}&#13;
+&#13;
+/* Main hover lift */&#13;
+.table-card:hover {&#13;
+  transform: translateY(-10px) scale(1.02);&#13;
+  box-shadow:&#13;
+    0 30px 80px rgba(0,0,0,0.18),&#13;
+    0 0 0 1px rgba(255,255,255,0.6) inset;&#13;
+}&#13;
+&#13;
+/* Soft gradient border glow */&#13;
+.table-card::before {&#13;
+  content: "";&#13;
+  position: absolute;&#13;
+  inset: -1px;&#13;
+  border-radius: inherit;&#13;
+  background: linear-gradient(&#13;
+    120deg,&#13;
+    rgba(59,130,246,0.35),&#13;
+    rgba(99,102,241,0.25),&#13;
+    transparent 70%&#13;
+  );&#13;
+  opacity: 0;&#13;
+  transition: opacity 0.35s ease;&#13;
+  z-index: -1;&#13;
+}&#13;
+&#13;
+.table-card:hover::before {&#13;
+  opacity: 1;&#13;
+}&#13;
+&#13;
+/* Light sweep container */&#13;
+.card-top {&#13;
+  position: relative;&#13;
+  overflow: hidden;&#13;
+}&#13;
+&#13;
+/* Sweep effect */&#13;
+.card-top::after {&#13;
+  content: "";&#13;
+  position: absolute;&#13;
+  top: 0;&#13;
+  left: -120%;&#13;
+  width: 80%;&#13;
+  height: 100%;&#13;
+  background: linear-gradient(&#13;
+    110deg,&#13;
+    transparent,&#13;
+    rgba(255,255,255,0.6),&#13;
+    transparent&#13;
+  );&#13;
+  transform: skewX(-20deg);&#13;
+}&#13;
+&#13;
+/* Trigger sweep on hover */&#13;
+.table-card:hover .card-top::after {&#13;
+  animation: cardSweep 0.8s ease forwards;&#13;
+}&#13;
+&#13;
+@keyframes cardSweep {&#13;
+  to {&#13;
+    left: 140%;&#13;
+  }&#13;
+}&#13;
+/* ================= RESPONSIVE ================= */&#13;
+@media (max-width: 1100px) {&#13;
+  .cards-grid {&#13;
+    grid-template-columns: repeat(2, 1fr);&#13;
+  }&#13;
+}&#13;
+&#13;
+@media (max-width: 640px) {&#13;
+  .cards-grid {&#13;
+    grid-template-columns: 1fr;&#13;
+  }&#13;
+&#13;
+  .browse-wrapper {&#13;
+    padding: 20px 15px;&#13;
+  }&#13;
+}&#13;
+&#13;
+/* ================= RECORD VIEW ================= */&#13;
+.records-wrapper {&#13;
+  background: #fff;&#13;
+  border-radius: 12px;&#13;
+  padding: 20px;&#13;
+  border: 1px solid #e5e7eb;&#13;
+}&#13;
+&#13;
+/* Header */&#13;
+.records-header {&#13;
+  display: flex;&#13;
+  align-items: center;&#13;
+  gap: 15px;&#13;
+  margin-bottom: 15px;&#13;
+}&#13;
+&#13;
+.back-btn {&#13;
+  background: #f3f4f6;&#13;
+  border: none;&#13;
+  padding: 6px 12px;&#13;
+  border-radius: 6px;&#13;
+  cursor: pointer;&#13;
+}&#13;
+&#13;
+.table-meta h3 {&#13;
+  margin: 0;&#13;
+  font-size: 18px;&#13;
+}&#13;
+&#13;
+.table-meta span {&#13;
+  color: #6b7280;&#13;
+  font-size: 13px;&#13;
+}&#13;
+&#13;
+/* Search */&#13;
+.record-search {&#13;
+  display: flex;&#13;
+  gap: 10px;&#13;
+  margin: 15px 0;&#13;
+}&#13;
+&#13;
+.record-search input {&#13;
+  flex: 1;&#13;
+  padding: 10px;&#13;
+  border-radius: 8px;&#13;
+  border: 1px solid #e5e7eb;&#13;
+}&#13;
+&#13;
+.select-all {&#13;
+  background: #f3f4f6;&#13;
+  border: none;&#13;
+  padding: 8px 12px;&#13;
+  border-radius: 6px;&#13;
+}&#13;
+&#13;
+.filter-box {&#13;
+  background: #f8f9fb;&#13;
+  padding: 15px;&#13;
+  border-radius: 6px;&#13;
+  margin-top: 10px;&#13;
+}&#13;
+&#13;
+.filter-row {&#13;
+  display: flex;&#13;
+  align-items: center;&#13;
+  gap: 10px;&#13;
+  margin-bottom: 10px;&#13;
+}&#13;
+&#13;
+.condition-label {&#13;
+  font-weight: 600;&#13;
+  min-width: 40px;&#13;
+}&#13;
+&#13;
+.filter-field {&#13;
+  width: 180px;&#13;
+}&#13;
+&#13;
+.filter-operator {&#13;
+  width: 160px;&#13;
+}&#13;
+&#13;
+.filter-value {&#13;
+  flex: 1;&#13;
+}&#13;
+&#13;
+.filter-remove {&#13;
+  padding: 4px 10px;&#13;
+}&#13;
+&#13;
+.filter-actions {&#13;
+  margin-top: 10px;&#13;
+  display: flex;&#13;
+  gap: 10px;&#13;
+}&#13;
+//Show the records selected&#13;
+.selected-count {&#13;
+  padding-top:10px;&#13;
+}&#13;
+/* RECORD LIST */&#13;
+.record-row {&#13;
+  display: grid;&#13;
+  grid-template-columns: &#13;
+    40px              /* checkbox */&#13;
+    2fr               /* record info */&#13;
+    1fr               /* updated by */&#13;
+    1fr               /* updated on */&#13;
+    40px              /* eye icon */&#13;
+    100px;            /* add button */&#13;
+&#13;
+  align-items: center;&#13;
+  padding: 16px 20px;&#13;
+  border-bottom: 1px solid #e5e7eb;&#13;
+  background: #fff;&#13;
+  gap: 10px;&#13;
+}&#13;
+&#13;
+.label {&#13;
+  font-size: 12px;&#13;
+  color: #6b7280;&#13;
+  margin-bottom: 2px;&#13;
+}&#13;
+&#13;
+.rec-id {&#13;
+  font-weight: 600;&#13;
+  font-size: 15px;&#13;
+  color: #1f2937;&#13;
+}&#13;
+&#13;
+.rec-desc {&#13;
+  font-size: 13px;&#13;
+  color: #6b7280;&#13;
+}&#13;
+&#13;
+&#13;
+.actions {&#13;
+  display: flex;&#13;
+  align-items: center;&#13;
+  gap: 15px;&#13;
+}&#13;
+&#13;
+.preview-icon {&#13;
+  font-size: 16px;&#13;
+  cursor: pointer;&#13;
+  color: #374151;&#13;
+}&#13;
+&#13;
+.preview-icon:hover {&#13;
+  color: #2563eb;&#13;
+}&#13;
+&#13;
+.add-btn {&#13;
+  background: #2563eb;&#13;
+  border: none;&#13;
+  color: white;&#13;
+  padding: 8px 14px;&#13;
+  border-radius: 6px;&#13;
+  font-weight: 500;&#13;
+  cursor: pointer;&#13;
+}&#13;
+&#13;
+&#13;
+&#13;
+/* ================= MODAL ================= */&#13;
+&#13;
+.preview-overlay {&#13;
+  position: fixed;&#13;
+  top: 0;&#13;
+  left: 0;&#13;
+  width: 100%;&#13;
+  height: 100%;&#13;
+  background: rgba(0,0,0,0.4);&#13;
+  display: flex;&#13;
+  align-items: center;&#13;
+  justify-content: center;&#13;
+  z-index: 9999;&#13;
+}&#13;
+&#13;
+.preview-modal {&#13;
+  background: #ffffff;&#13;
+  width: 600px;&#13;
+  border-radius: 12px;&#13;
+  padding: 30px;&#13;
+  position: relative;&#13;
+}&#13;
+&#13;
+.preview-title {&#13;
+  font-size: 20px;&#13;
+  font-weight: 600;&#13;
+  margin-bottom: 20px;&#13;
+}&#13;
+&#13;
+.preview-close {&#13;
+  position: absolute;&#13;
+  top: 15px;&#13;
+  right: 20px;&#13;
+  font-size: 20px;&#13;
+  cursor: pointer;&#13;
+}&#13;
+&#13;
+.preview-grid {&#13;
+  display: grid;&#13;
+  grid-template-columns: 1fr 1fr;&#13;
+  gap: 20px;&#13;
+}&#13;
+&#13;
+.full-width {&#13;
+  grid-column: span 2;&#13;
+}&#13;
+&#13;
+.preview-grid label {&#13;
+  font-size: 13px;&#13;
+  color: #6b7280;&#13;
+  display: block;&#13;
+  margin-bottom: 4px;&#13;
+}&#13;
+&#13;
+.preview-link {&#13;
+  color: #2563eb;&#13;
+  font-weight: 600;&#13;
+}&#13;
+&#13;
+.preview-desc {&#13;
+  font-weight: 500;&#13;
+}&#13;
+&#13;
+.preview-footer {&#13;
+  margin-top: 25px;&#13;
+  border-top: 1px solid #e5e5e5;&#13;
+  padding-top: 20px;&#13;
+}&#13;
+&#13;
+.add-cart-btn {&#13;
+  width: 100%;&#13;
+  padding: 12px;&#13;
+  background: #2563eb;&#13;
+  border: none;&#13;
+  color: white;&#13;
+  font-size: 15px;&#13;
+  border-radius: 6px;&#13;
+  cursor: pointer;&#13;
+}&#13;
+&#13;
+/* EMPTY STATE */&#13;
+.search-empty {&#13;
+  text-align: center;&#13;
+  padding: 40px 0;&#13;
+  color: #777;&#13;
+}&#13;
+&#13;
+.big-icon {&#13;
+  font-size: 40px;&#13;
+  margin-bottom: 10px;&#13;
+  color: #d1d5db;&#13;
+}&#13;
+/* ================= SNACKBAR ================= */&#13;
+&#13;
+.snackbar {&#13;
+  position: fixed;&#13;
+  bottom: 25px;&#13;
+  right: 25px;&#13;
+  background: #ffffff;&#13;
+  border-radius: 10px;&#13;
+  padding: 14px 18px;&#13;
+  display: flex;&#13;
+  align-items: center;&#13;
+  gap: 12px;&#13;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);&#13;
+  border: 1px solid #e5e7eb;&#13;
+&#13;
+  transform: translateY(120%);&#13;
+  opacity: 0;&#13;
+  transition: all 0.35s ease;&#13;
+&#13;
+  z-index: 99999;&#13;
+  min-width: 260px;&#13;
+}&#13;
+&#13;
+/* show animation */&#13;
+.snackbar.show {&#13;
+  transform: translateY(0);&#13;
+  opacity: 1;&#13;
+}&#13;
+&#13;
+.snackbar i {&#13;
+  color: #22c55e;&#13;
+  font-size: 20px;&#13;
+}&#13;
+&#13;
+.snack-text strong {&#13;
+  font-size: 14px;&#13;
+  display: block;&#13;
+  color: #111827;&#13;
+}&#13;
+&#13;
+.snack-text div {&#13;
+  font-size: 13px;&#13;
+  color: #6b7280;&#13;
+}&#13;
+/* ================= PAGINATION ================= */&#13;
+&#13;
+.pagination-bar{&#13;
+  display:flex;&#13;
+  justify-content:center;&#13;
+  align-items:center;&#13;
+  gap:18px;&#13;
+  margin-top:25px;&#13;
+  padding:12px;&#13;
+}&#13;
+&#13;
+/* Page buttons */&#13;
+&#13;
+.page-btn{&#13;
+  background:#2563eb;&#13;
+  color:white;&#13;
+  border:none;&#13;
+  padding:8px 18px;&#13;
+  border-radius:6px;&#13;
+  font-weight:500;&#13;
+  cursor:pointer;&#13;
+  transition:all 0.2s ease;&#13;
+}&#13;
+&#13;
+/* Hover effect */&#13;
+&#13;
+.page-btn:hover{&#13;
+  background:#1d4ed8;&#13;
+  transform:translateY(-1px);&#13;
+  box-shadow:0 6px 16px rgba(0,0,0,0.15);&#13;
+}&#13;
+&#13;
+/* Disabled state */&#13;
+&#13;
+.page-btn:disabled{&#13;
+  background:#9ca3af;&#13;
+  cursor:not-allowed;&#13;
+  box-shadow:none;&#13;
+  transform:none;&#13;
+}&#13;
+&#13;
+/* Page info text */&#13;
+&#13;
+.page-info{&#13;
+  font-size:14px;&#13;
+  font-weight:600;&#13;
+  color:#374151;&#13;
+  background:#f3f4f6;&#13;
+  padding:6px 14px;&#13;
+  border-radius:6px;&#13;
+}&#13;
+/* ================= RECORD LOADER ================= */&#13;
+&#13;
+.records-loader{&#13;
+  position:absolute;&#13;
+  top:0;&#13;
+  left:0;&#13;
+  width:100%;&#13;
+  height:100%;&#13;
+  background:rgba(255,255,255,0.85);&#13;
+  display:flex;&#13;
+  align-items:center;&#13;
+  justify-content:center;&#13;
+  z-index:1000;&#13;
+  border-radius:12px;&#13;
+}&#13;
+&#13;
+.loader-card{&#13;
+  text-align:center;&#13;
+  padding:40px 50px;&#13;
+  background:#ffffff;&#13;
+  border-radius:12px;&#13;
+  box-shadow:0 15px 40px rgba(0,0,0,0.15);&#13;
+}&#13;
+&#13;
+.loader-card h3{&#13;
+  margin-top:12px;&#13;
+  font-size:18px;&#13;
+  font-weight:600;&#13;
+}&#13;
+&#13;
+.loader-card p{&#13;
+  font-size:14px;&#13;
+  color:#6b7280;&#13;
+}&#13;
+&#13;
+/* Spinner */&#13;
+&#13;
+.spinner{&#13;
+  width:45px;&#13;
+  height:45px;&#13;
+  border:4px solid #e5e7eb;&#13;
+  border-top:4px solid #2563eb;&#13;
+  border-radius:50%;&#13;
+  animation:spin 0.8s linear infinite;&#13;
+  margin:auto;&#13;
+}&#13;
+&#13;
+@keyframes spin{&#13;
+  100%{&#13;
+    transform:rotate(360deg);&#13;
+  }&#13;
+}</css>
+        <data_table>sp_instance</data_table>
+        <demo_data/>
+        <description/>
+        <docs/>
+        <field_list/>
+        <has_preview>true</has_preview>
+        <id/>
+        <internal>false</internal>
+        <link><![CDATA[function link(scope, element, attrs, controller) {
+  
+}]]></link>
+        <name>Copy of Load Tables</name>
+        <option_schema/>
+        <public>false</public>
+        <roles/>
+        <script><![CDATA[(function () {
+
+    data.side = $sp.getWidget('dmm_sidebar');
+
+    data.instanceName = '';
+    data.instanceUrl = '';
+    data.tables = [];
+    data.records = [];
+		var totalCount
+    // ===============================
+    // 1️⃣ Get Connection from Parameter
+    // ===============================
+    var connectionSysId = $sp.getParameter('sys_id');
+
+    if (!connectionSysId) {
+        data.error = "Connection Sys ID not provided";
+        return;
+    }
+
+    var connGR = new GlideRecord('x_sysus_data_mig_0_connection'); // ]]>🔁<![CDATA[ your table
+    if (!connGR.get(connectionSysId)) {
+        data.error = "Connection not found";
+        return;
+    }
+
+    data.instanceName = connGR.getValue('name');
+    data.instanceUrl = connGR.getValue('url');
+
+    var username = connGR.getValue('username');
+    var password = connGR.getValue('password'); // ensure encrypted field
+
+
+    // ===============================
+    // 2️⃣ REST CALL FUNCTION
+    // ===============================
+function callRemote(table, query, limit) {
+
+    try {
+
+        var r = new sn_ws.RESTMessageV2();
+        r.setHttpMethod('get');
+
+        var endpoint = data.instanceUrl +
+            "/api/now/table/" + table +
+            "?sysparm_query=" + encodeURIComponent(query || '') +
+            "&sysparm_limit=" + (limit || 200);
+
+        r.setEndpoint(endpoint);
+        r.setBasicAuth(username, password);
+        r.setRequestHeader("Accept", "application/json");
+
+        // ask API to return total count
+        r.setRequestHeader("sysparm_count", "true");
+
+        var response = r.execute();
+        var body = response.getBody();
+
+        totalCount = response.getHeader("x-total-count");
+
+        return JSON.parse(body);
+
+    } catch (ex) {
+        gs.error("REST Error: " + ex);
+        return null;
+    }
+}
+
+    // ===============================
+    // 3️⃣ INITIAL LOAD (TABLE COUNTS)
+    // ===============================
+ if (!input) {
+
+    var tableList = [
+        { name: 'incident', label: 'Incidents' },
+        { name: 'change_request', label: 'Change Requests' },
+        { name: 'problem', label: 'Problems' }
+    ];
+
+    for (var i = 0; i < tableList.length; i++) {
+
+        var tableName = tableList[i].name;
+
+       var result = callRemote(tableName, '', 1);
+
+
+
+        data.tables.push({
+            name: tableName,
+            label: tableList[i].label,
+            count: totalCount || 990
+        });
+	}
+}
+
+    // ===============================
+    // 4️⃣ LOAD RECORDS (When table clicked)
+    // ===============================
+ if (input && input.action === "getRecords") {
+
+        var table = input.table;
+        var encodedQuery = input.query || '';
+
+        var response = callRemote(table, encodedQuery,2000);
+
+        if (response && response.result) {
+	            for (var r = 0; r < response.result.length; r++) {
+
+                var rec = response.result[r];
+								
+                data.records.push({
+                    sys_id: rec.sys_id,
+                    number: rec.number,
+										state:rec.state,
+                    short_description: rec.short_description,
+                    sys_updated_by: rec.sys_updated_by,
+                    sys_updated_on: rec.sys_updated_on,
+                });
+            }
+        
+    }
+
+
+
+
+    // ===============================
+    // 5️⃣ REFRESH RECORD PREVIEW (optional future use)
+    // ===============================
+    if (input && input.action === "previewRecord") {
+
+        var tblName = input.table;
+        var sysId = input.sys_id;
+
+        var previewResponse = callRemote(tblName, "sys_id=" + sysId, 1);
+
+        if (previewResponse && previewResponse.result && previewResponse.result.length > 0) {
+            data.preview = previewResponse.result[0];
+        }
+    }}
+
+})();
+
+]]></script>
+        <servicenow>false</servicenow>
+        <sys_class_name>sp_widget</sys_class_name>
+        <sys_created_by>faizan.latief</sys_created_by>
+        <sys_created_on>2026-03-13 09:55:49</sys_created_on>
+        <sys_id>440073da3b6bfa50deb2090eb3e45a88</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>Copy of Load Tables</sys_name>
+        <sys_package display_value="Data Migration" source="x_sysus_data_mig_0">9977a0f8eb03f610084cfd50dad0cd43</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Data Migration">9977a0f8eb03f610084cfd50dad0cd43</sys_scope>
+        <sys_update_name>sp_widget_440073da3b6bfa50deb2090eb3e45a88</sys_update_name>
+        <sys_updated_by>faizan.latief</sys_updated_by>
+        <sys_updated_on>2026-03-13 09:55:49</sys_updated_on>
+        <template><![CDATA[<div class="browse-layout">
+    <!-- SIDEBAR -->
+    <div class="dm-sidebar-slot">
+        <sp-widget widget="data.side"></sp-widget>
+    </div>
+    <div class="browse-wrapper" ng-init="c.activeTab='tables'">
+        <!-- HEADER -->
+        <div class="page-header">
+            <h2>Browse & Select Records</h2>
+            <p>Search and select individual records to add to your Migration Queue</p>
+        </div> <!-- CONNECTION -->
+        <div class="connection-banner"> Connected to: {{c.data.instanceName}} ({{c.data.instanceUrl}}) </div> <!-- TABS -->
+        <div class="tabs">
+            <div class="tab" ng-class="{active:c.activeTab=='tables'}" ng-click="c.activeTab='tables'"> <i class="fa fa-table"></i> Table Browser </div>
+            <div class="tab" ng-class="{active:c.activeTab=='search'}" ng-click="c.activeTab='search'"> <i class="fa fa-search"></i> Quick Search </div>
+        </div> <!-- ================= TABLE CARDS ================= -->
+        <div ng-if="c.activeTab=='tables' && c.view=='tables'" class="cards-grid">
+            <div class="table-card" ng-repeat="t in c.data.tables">
+                <div class="card-top">
+                    <div class="count">{{t.count}}</div>
+                    <div class="title">{{t.label}}</div>
+                    <div class="name">{{t.name}}</div>
+                </div> <button class="browse-btn" ng-click="c.openTable(t)"> Browse Records </button>
+            </div>
+        </div> <!-- ================= RECORD VIEW ================= -->
+        <div ng-if="c.activeTab=='tables' && c.view=='records'" class="records-wrapper">
+            <!-- HEADER -->
+            <div class="records-header"> <button class="back-btn" ng-click="c.backToTables()"> ← Back to Tables </button>
+                <div class="table-meta">
+                    <h3>{{c.selectedTable.label}}</h3> <span>{{c.records.length}} record(s)</span>
+                </div>
+            </div> <!-- SEARCH -->
+            <div class="record-search"> <input type="text" ng-model="c.recordSearch" placeholder="Search records..."> <button class="select-all" ng-click="c.toggleAll()"> {{c.selectAll ? 'Unselect All' : 'Select All'}} </button> <span class="selected-count"> {{ (c.records | filter:{selected:true}).length }} Selected </span> <!-- ADD TO CART BUTTON --> <button class="add-btn" ng-if="c.selectAll" ng-click="c.addSelectedToCart()"> + Add to Queue </button> </div> <!-- ================= FILTER TOGGLE ================= -->
+            <div class="filter-header"> <button class="btn btn-default" ng-click="c.toggleFilter()"> <i class="fa fa-filter"></i> {{c.showFilter ? 'Hide Filters' : 'Show Filters'}} </button> </div> <!-- ================= FILTER BUILDER ================= -->
+            <div class="filter-box" ng-if="c.showFilter">
+                <div class="filter-row" ng-repeat="f in c.filterConditions track by $index">
+                    <div class="condition-label" ng-if="$index > 0"> {{f.condition}} </div> <select class="form-control filter-field" ng-model="f.field">
+                        <option value="">Select field</option>
+                        <option value="number">Number</option>
+                        <option value="sys_updated_on">Updated On</option>
+                        <option value="sys_updated_by">Updated By</option>
+                        <option value="sys_id">SysID</option>
+                        <option value="state">State</option>
+                        <option value="active">Active</option>
+                        <option value="short_description">Short description</option>
+                    </select> <select class="form-control filter-operator" ng-model="f.operator">
+                        <option value="=">is</option>
+                        <option value="STARTSWITH">starts with</option>
+                        <option value="CONTAINS">contains</option>
+                    </select> <input type="text" class="form-control filter-value" ng-model="f.value" placeholder="Enter value" /> <button class="btn btn-danger filter-remove" ng-click="c.removeCondition($index)" ng-if="c.filterConditions.length > 1"> × </button>
+                </div>
+                <div class="filter-actions"> <button class="btn btn-default" ng-click="c.addCondition('AND')"> + AND </button> <button class="btn btn-default" ng-click="c.addCondition('OR')"> + OR </button> <button class="btn btn-primary" ng-click="c.applyFilters()"> Apply </button> <button class="btn btn-warning" ng-click="c.clearAllFilters()"> Clear </button> </div>
+            </div> <!-- ================= RECORD LIST ================= -->
+            <div class="record-row" ng-repeat="r in c.records | filter:c.recordSearch">
+                <!-- Checkbox -->
+                <div> <input type="checkbox" ng-model="r.selected" ng-change="c.syncSelectAllState()"> </div> <!-- Record Info -->
+                <div>
+                    <div class="rec-id"> {{r.number}} </div>
+                    <div class="rec-desc"> {{r.short_description}} </div>
+                </div> <!-- Updated By -->
+                <div>
+                    <div class="label">Updated By</div> <strong>{{r.sys_updated_by}}</strong>
+                </div> <!-- Updated On -->
+                <div>
+                    <div class="label">Updated On</div> <strong> {{r.sys_updated_on}}</strong>
+                </div> <!-- Eye Icon -->
+                <div> <i class="fa fa-eye preview-icon" ng-click="c.openPreview(r)"> </i> </div> <!-- Add Button -->
+                <div> <button class="add-btn" ng-class="{'in-cart-btn': c.isInCart(r.number)}" ng-disabled="c.isInCart(r.number)" ng-click="c.addSingleToCart(r)"> {{c.isInCart(r.number) ? 'In Queue' : '+ Add'}} </button> </div>
+            </div> <!-- EMPTY STATE -->
+            <div ng-if="c.records && c.records.length == 0" class="search-empty"> <i class="fa fa-database big-icon"></i>
+                <h3>No Records Found</h3>
+                <p>No records available in this table</p>
+            </div>
+        </div> <!-- ================= QUICK SEARCH ================= -->
+        <div ng-if="c.activeTab=='search'" class="quick-search-wrapper">
+            <div class="search-bar"> <i class="fa fa-search"></i> <input type="text" placeholder="Search by record number or Sys ID"> </div>
+            <div class="search-empty"> <i class="fa fa-search big-icon"></i>
+                <h3>Quick Record Search</h3>
+                <p>Search for specific records across all tables</p>
+            </div>
+        </div>
+    </div>
+</div> <!-- PREVIEW MODAL -->
+<div class="preview-overlay" ng-if="c.previewOpen">
+    <div class="preview-modal">
+        <div class="preview-close" ng-click="c.closePreview()">×</div>
+        <h3 class="preview-title">Record Preview</h3>
+        <div class="preview-grid">
+            <div> <label>Record Number</label>
+                <div class="preview-link"> {{c.previewData.number}} </div>
+            </div>
+            <div> <label>Sys ID</label>
+                <div>{{c.previewData.sys_id}}</div>
+            </div>
+            <div class="full-width"> <label>Short Description</label>
+                <div class="preview-desc"> {{c.previewData.short_description}} </div>
+            </div>
+            <div> <label>Updated By</label>
+                <div>{{c.previewData.sys_updated_by}}</div>
+            </div>
+            <div> <label>Updated On</label>
+                <div>{{c.previewData.sys_updated_on}}</div>
+            </div>
+        </div>
+        <div class="preview-footer"> <button class="add-cart-btn" ng-class="{'in-cart-btn': c.isInCart(c.previewData.number)}" ng-disabled="c.isInCart(c.previewData.number)" ng-click="c.addPreviewToCart()"> <i class="fa" ng-class="c.isInCart(c.previewData.number) ? 'fa-check' : 'fa-plus'"> </i> {{c.isInCart(c.previewData.number) ? 'In Queue' : 'Add to Queue'}} </button> </div>
+    </div>
+</div> <!-- GLOBAL SNACKBAR -->
+<div class="snackbar" ng-class="{'show':c.showSnack}"> <i class="fa fa-check-circle"></i>
+    <div class="snack-text"> <strong>Added to Queue</strong>
+        <div>{{c.snackMessage}}</div>
+    </div>
+</div>]]></template>
+    </sp_widget>
+</record_update>

@@ -1,0 +1,538 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_widget">
+    <sp_widget action="INSERT_OR_UPDATE">
+        <category>custom</category>
+        <client_script><![CDATA[api.controller = function($timeout){
+
+var c = this;
+
+c.$onInit = function(){
+
+    c.settings = c.data.settings || {};
+
+    $timeout(function(){
+        applyTheme(c.settings.theme || "light");
+    },300);
+};
+
+
+/* APPLY THEME */
+
+function applyTheme(theme){
+
+    var root = document.getElementById("sp_page_root");
+
+    if(!root) return;
+
+    root.classList.remove("dark-theme");
+
+    if(theme === "dark"){
+        root.classList.add("dark-theme");
+    }
+}
+
+
+/* BUTTON CLICK */
+
+c.setTheme = function(theme){
+
+    c.settings.theme = theme;
+    applyTheme(theme);
+};
+
+};]]></client_script>
+        <controller_as>c</controller_as>
+        <css>/* ================= LAYOUT ================= */
+
+.sp-layouts{
+  display:flex;
+  max-height:calc(100vh - 64px);
+  position: relative;
+  background:red;
+}
+
+.sidebar-area{
+  width:260px;
+  max-height: calc(100vh - 64px);
+}
+
+.dmm-settings{
+  flex:1;
+  background:#f5f7fb;
+  padding:30px;
+  position: relative;
+  overflow-y:auto;
+  max-height:calc(100vh - 64px);
+}
+
+/* Heading*/
+/* SETTINGS HEADER */
+
+.settings-header{
+  margin-bottom:20px;
+}
+
+.settings-title{
+  font-size:26px;
+  font-weight:600;
+  margin:0;
+  color:#111827;
+}
+
+.settings-title i{
+  margin-right:8px;
+  color:#1F8C95;
+}
+
+.settings-subtitle{
+  margin-top:5px;
+  color:#6b7280;
+  font-size:14px;
+}
+
+/* DARK MODE SUPPORT */
+
+body.dark-theme .settings-title{
+  color:#ffffff;
+}
+
+body.dark-theme .settings-subtitle{
+  color:#9ca3af;
+}
+/* CARD */
+
+.card{
+  background:#fff;
+  border-radius:12px;
+  padding:25px;
+  margin-top:20px;
+  box-shadow:0 4px 12px rgba(0,0,0,.04);
+}
+
+.card-title{
+  font-weight:600;
+  margin-bottom:20px;
+}
+
+/* INPUTS */
+
+input,select{
+  width:100%;
+  padding:10px;
+  border-radius:8px;
+  border:1px solid #e5e7eb;
+  background:#f9fafb;
+}
+
+/* SWITCH */
+
+.toggle-row{
+  display:flex;
+  justify-content:space-between;
+  margin:18px 0;
+}
+
+.switch{
+  position:relative;
+  width:40px;
+  height:20px;
+}
+
+.switch input{display:none;}
+
+.slider{
+  position:absolute;
+  width:100%;
+  height:100%;
+  background:#e5e7eb;
+  border-radius:20px;
+}
+
+.slider:before{
+  content:"";
+  position:absolute;
+  width:16px;
+  height:16px;
+  left:2px;
+  top:2px;
+  background:#fff;
+  border-radius:50%;
+  transition:.2s;
+}
+
+input:checked + .slider{
+  background:#1F8C95;
+}
+
+input:checked + .slider:before{
+  transform:translateX(20px);
+}
+
+/* BUTTON */
+
+.btn-save{
+  margin-top:20px;
+  background:;
+  color:#fff;
+  border:none;
+  padding:10px 18px;
+  border-radius:8px;
+}
+.btn-save:hover{
+ background: linear-gradient(to right, #128a9a, #0a5f6d);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+  transition: all 2s ease-out;
+}
+/* THEME SELECTOR */
+
+.theme-preview{
+  display:flex;
+  gap:12px;
+}
+
+.theme-option{
+  padding:10px 20px;
+  border:1px solid #ddd;
+  border-radius:10px;
+  cursor:pointer;
+}
+
+.theme-option.selected{
+  border:2px solid #1F8C95;
+  background:#eef4ff;
+}
+/* ================= GLOBAL DARK MODE ================= */
+/* DARK MODE */
+
+body.dark-theme{
+  background:#0b1220 !important;
+  color:#e5e7eb !important;
+}
+
+body.dark-theme .sidebar-area{
+  background:#020617 !important;
+}
+
+body.dark-theme .dmm-settings{
+  background:#0b1220 !important;
+}
+
+body.dark-theme .card{
+  background:#111827 !important;
+  color:#fff !important;
+}
+
+body.dark-theme input,
+body.dark-theme select{
+  background:#1f2937 !important;
+  color:#fff !important;
+  border:1px solid #374151 !important;
+}
+body.dark-theme {
+  background:#0b1220 !important;
+  color:#e5e7eb !important;
+}
+
+/* cards */
+body.dark-theme .card,
+body.dark-theme .panel{
+  background:#111827 !important;
+  color:#ffffff !important;
+}
+
+/* sidebar */
+body.dark-theme .sidebar-area{
+  background:#020617 !important;
+}
+
+/* settings area */
+body.dark-theme .dmm-settings{
+  background:#0b1220 !important;
+}
+
+/* inputs */
+body.dark-theme input,
+body.dark-theme select,
+body.dark-theme textarea{
+  background:#1f2937 !important;
+  color:#fff !important;
+  border:1px solid #374151 !important;
+}
+
+/* links */
+body.dark-theme a{
+  color:#93c5fd !important;
+}
+
+/* button */
+body.dark-theme .btn-save{
+  background:#ffffff !important;
+  color:#000 !important;
+}
+
+/* smooth transition */
+body,
+body *{
+  transition:all .25s ease;
+}
+
+
+/* LIGHT MODE DEFAULT */
+
+.sp-layout{
+display:flex;
+min-height:100vh;
+}
+
+.sidebar-area{
+width:260px;
+background:#fff;
+}
+
+.dmm-settings{
+flex:1;
+padding:30px;
+background:#f5f7fb;
+}
+
+.card{
+background:#fff;
+padding:25px;
+border-radius:10px;
+}
+
+/* DARK MODE */
+
+body.dark-theme{
+background:#0b1220 !important;
+color:#fff !important;
+}
+
+body.dark-theme .sidebar-area{
+background:#020617 !important;
+}
+
+body.dark-theme .dmm-settings{
+background:#0b1220 !important;
+}
+
+body.dark-theme .card{
+background:#111827 !important;
+color:#fff !important;
+}
+
+body.dark-theme input,
+body.dark-theme select{
+background:#1f2937 !important;
+color:#fff !important;
+border:1px solid #374151 !important;
+}
+
+.btn-save{
+margin-top:20px;
+padding:10px 18px;
+background:#1F8C95;
+color:#fff;
+border:none;
+border-radius:8px;
+cursor:pointer;
+}
+
+.theme-preview{
+display:flex;
+gap:10px;
+margin-top:10px;
+}
+
+.theme-option{
+padding:10px 20px;
+border:1px solid #ccc;
+border-radius:8px;
+cursor:pointer;
+}</css>
+        <data_table>sp_instance</data_table>
+        <demo_data/>
+        <description/>
+        <docs/>
+        <field_list/>
+        <has_preview>true</has_preview>
+        <id>dmm_settings</id>
+        <internal>false</internal>
+        <link><![CDATA[function link(scope, element, attrs, controller) {
+  
+}]]></link>
+        <name>DMM Settings</name>
+        <option_schema/>
+        <public>false</public>
+        <roles/>
+        <script><![CDATA[(function () {
+
+data.side = $sp.getWidget('dmm_sidebar');
+
+var gr = new GlideRecord('x_sysus_data_mig_0_setting');
+gr.orderByDesc('sys_created_on');
+gr.setLimit(1);
+gr.query();
+
+if(gr.next()){
+
+    data.settings = {
+        sys_id: gr.getUniqueValue(),
+        email: gr.notification_email + "",
+        batch: gr.batch_size + "",
+        notify: gr.enable_notifications == true,
+        logging: gr.detailed_logging == true,
+        date_format: gr.date_format + "",
+        timezone: gr.timezone + "",
+        theme: gr.theme ? gr.theme + "" : "light"
+    };
+
+}else{
+
+    data.settings = {
+        sys_id:"",
+        email:"",
+        batch:"100",
+        notify:false,
+        logging:false,
+        date_format:"YYYY-MM-DD HH:mm:ss",
+        timezone:"UTC",
+        theme:"light"
+    };
+}
+
+/* SAVE */
+
+if(input && input.action === "saveSettings"){
+
+    var saveGR = new GlideRecord('x_sysus_data_mig_0_setting');
+
+    if(input.settings.sys_id &&
+       saveGR.get(input.settings.sys_id)){
+
+        saveGR.notification_email=input.settings.email;
+        saveGR.batch_size=input.settings.batch;
+        saveGR.enable_notifications=input.settings.notify;
+        saveGR.detailed_logging=input.settings.logging;
+        saveGR.date_format=input.settings.date_format;
+        saveGR.timezone=input.settings.timezone;
+        saveGR.theme=input.settings.theme;
+        saveGR.update();
+
+    }else{
+
+        saveGR.initialize();
+        saveGR.notification_email=input.settings.email;
+        saveGR.batch_size=input.settings.batch;
+        saveGR.enable_notifications=input.settings.notify;
+        saveGR.detailed_logging=input.settings.logging;
+        saveGR.date_format=input.settings.date_format;
+        saveGR.timezone=input.settings.timezone;
+        saveGR.theme=input.settings.theme;
+        saveGR.insert();
+    }
+
+    data.saved=true;
+}
+
+})();]]></script>
+        <servicenow>false</servicenow>
+        <sys_class_name>sp_widget</sys_class_name>
+        <sys_created_by>bareen.makhdoomi</sys_created_by>
+        <sys_created_on>2026-02-19 10:17:56</sys_created_on>
+        <sys_id>ef026a5b3b87f650deb2090eb3e45ad6</sys_id>
+        <sys_mod_count>110</sys_mod_count>
+        <sys_name>DMM Settings</sys_name>
+        <sys_package display_value="Data Migration" source="x_sysus_data_mig_0">9977a0f8eb03f610084cfd50dad0cd43</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Data Migration">9977a0f8eb03f610084cfd50dad0cd43</sys_scope>
+        <sys_update_name>sp_widget_ef026a5b3b87f650deb2090eb3e45ad6</sys_update_name>
+        <sys_updated_by>munaib.ashraf</sys_updated_by>
+        <sys_updated_on>2026-03-31 15:48:56</sys_updated_on>
+        <template><![CDATA[<div class="sp-layouts">
+
+<!-- SIDEBAR -->
+<div class="sidebar-area">
+  <sp-widget widget="data.side"></sp-widget>
+</div>
+
+<!-- SETTINGS AREA -->
+<div class="dmm-settings">
+  <!--Heading-->
+<div class="settings-header">
+  <h1 class="settings-title"> Settings
+  </h1>
+  <p class="settings-subtitle">
+    Configure your application preferences, notifications, and system behavior
+  </p>
+</div>
+
+<div class="card config-card">
+
+<div class="card-title">
+<i class="fa fa-bell-o"></i>
+Application Configuration
+</div>
+
+<div class="form-group">
+<label>Notification Email</label>
+<input type="text" ng-model="c.settings.email">
+</div>
+
+
+
+<hr>
+
+<div class="toggle-row">
+<strong>Enable Notifications</strong>
+<label class="switch">
+<input type="checkbox" ng-model="c.settings.notify">
+<span class="slider"></span>
+</label>
+</div>
+
+<div class="toggle-row">
+<strong>Detailed Logging</strong>
+<label class="switch">
+<input type="checkbox" ng-model="c.settings.logging">
+<span class="slider"></span>
+</label>
+</div>
+
+<hr>
+
+<div class="card-title">
+<i class="fa fa-sliders"></i> Preferences
+</div>
+
+<div class="preferences-row">
+
+<div class="pref-box">
+<label>Date Format</label>
+<select ng-model="c.settings.date_format">
+<option value="YYYY-MM-DD HH:mm:ss">YYYY-MM-DD</option>
+<option value="MM/DD/YYYY HH:mm:ss">MM/DD/YYYY</option>
+<option value="DD-MM-YYYY HH:mm:ss">DD-MM-YYYY</option>
+</select>
+</div>
+
+<div class="pref-box">
+<label>Timezone</label>
+<select ng-model="c.settings.timezone">
+<option>UTC</option>
+<option>Asia/Kolkata</option>
+<option>America/Los_Angeles</option>
+<option>Europe/London</option>
+</select>
+</div>
+
+</div>
+
+<button class="btn-save" ng-click="c.saveSettings()">
+<i class="fa fa-save"></i> Save Settings
+</button>
+
+</div>
+  </div>
+</div>]]></template>
+    </sp_widget>
+</record_update>

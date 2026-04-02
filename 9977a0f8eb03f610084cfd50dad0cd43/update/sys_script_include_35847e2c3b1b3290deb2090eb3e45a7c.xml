@@ -1,0 +1,415 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>package_private</access>
+        <active>true</active>
+        <api_name>x_sysus_data_mig_0.dataMigration</api_name>
+        <caller_access/>
+        <client_callable>false</client_callable>
+        <description/>
+        <mobile_callable>false</mobile_callable>
+        <name>dataMigration</name>
+        <sandbox_callable>false</sandbox_callable>
+        <script><![CDATA[var dataMigration = Class.create();
+dataMigration.prototype = {
+ 
+    insertRecords: function(sourceurl, username, pswd, table, record, parentTables) {
+        gs.info(']]>🚀<![CDATA[ FULLY DYNAMIC Migration START: ' + table + (record ? '/' + record : ''));
+        var baseUrl = sourceurl.replace(/\\\\\\\\\\\\+/g, '');
+        var records = [];
+       
+        if (!record || record === 'first' || record === null) {
+            records = this.fetchRecords(baseUrl, table, username, pswd);
+        } else {
+            var sysId = this.findRecordSysId(baseUrl, table, username, pswd, record);
+            if (sysId) {
+                records = this.fetchRecords(baseUrl, table, username, pswd, sysId);
+            }
+        }
+       
+        if (!records.length) return 'No records found';
+       
+        var count = 0;
+        for (var i = 0; i < records.length; i++) {
+            var result = this.migrateRecordDynamic(sourceurl, username, pswd, table, records[i], parentTables);
+            gs.info('✅ Migrated ' + table + '/' + records[i].sys_id + ' -> ' + result);
+            count++;
+        }
+        return 'Migrated ' + count + ' records successfully';
+    },
+ 
+    // ]]>🔥<![CDATA[ FULLY DYNAMIC: Accepts ANY parent tables
+    migrateRecordDynamic: function(sourceurl, username, pswd, table, recordData, parentTables) {
+        var sysId = recordData.sys_id;
+        var baseUrl = sourceurl.replace(/\\\\\\\\\\\\+/g, '');
+       
+        gs.info(']]>🔄<![CDATA[ DYNAMIC Processing: ' + table + '/' + sysId);
+       
+        // ]]>🔥<![CDATA[ DYNAMIC PARENT TABLES (task, incident, problem, change_request, etc.)
+        var parentTablesArray = parentTables || ['task'];  // Default: task table
+        if (typeof parentTablesArray === 'string') parentTablesArray = [parentTablesArray];
+       
+        gs.info(']]>📋<![CDATA[ Scanning parent tables: ' + parentTablesArray.join(', '));
+       
+        // ]]>🔥<![CDATA[ STEP 1: Get ALL reference fields from ALL parent tables + target table
+        var allParentRefFields = [];
+        for (var p = 0; p < parentTablesArray.length; p++) {
+            var parentRefFields = this.getDynamicReferenceFields(parentTablesArray[p]);
+            allParentRefFields = allParentRefFields.concat(parentRefFields);
+            gs.info(']]>📋<![CDATA[ ' + parentTablesArray[p] + ' refs: ' + parentRefFields.length);
+        }
+        var tableRefFields = this.getDynamicReferenceFields(table);
+        var allRefFields = this.removeDuplicates(allParentRefFields.concat(tableRefFields));
+       
+        // ]]>🔥<![CDATA[ NEW: Get ALL related lists from ALL parent tables + target table
+        var allParentRelatedLists = [];
+        for (var p2 = 0; p2 < parentTablesArray.length; p2++) {
+            var parentRelLists = this.getDynamicRelatedLists(parentTablesArray[p2]);
+            allParentRelatedLists = allParentRelatedLists.concat(parentRelLists);
+        }
+        var tableRelatedLists = this.getDynamicRelatedLists(table);
+        var allRelatedLists = this.removeDuplicateRelatedLists(allParentRelatedLists.concat(tableRelatedLists));
+       
+        // ]]>🔥<![CDATA[ ENHANCED LOGGING
+        gs.info(']]>📋<![CDATA[ TOTAL refs: ' + allRefFields.length + ' | TOTAL related lists: ' + allRelatedLists.length);
+       
+        // ]]>🔥<![CDATA[ STEP 2: Find populated reference fields
+        var populatedRefs = [];
+        for (var i = 0; i < allRefFields.length; i++) {
+            var field = allRefFields[i].element;
+            var value = recordData[field];
+           
+            if (value) {
+                var refSysId = this.extractSysId(value);
+                if (refSysId) {
+                    populatedRefs.push({
+                        field: field,
+                        refTable: allRefFields[i].reference.value,
+                        sysId: refSysId
+                    });
+                }
+            }
+        }
+       
+        gs.info(']]>📋<![CDATA[ POPULATED: ' + populatedRefs.length + ' fields -> ' +
+                populatedRefs.map(function(f){ return f.field + '(' + f.refTable + ')'; }).join(', '));
+       
+        // ]]>🔥<![CDATA[ STEP 3: MIGRATE ALL REFERENCE RECORDS FIRST
+        for (var j = 0; j < populatedRefs.length; j++) {
+            var refInfo = populatedRefs[j];
+            gs.info(']]>🔗<![CDATA[ STEP 3: Migrating ' + refInfo.field + ' -> ' + refInfo.refTable + '/' + refInfo.sysId);
+           
+            var refRecord = this.fetchRecords(baseUrl, refInfo.refTable, username, pswd, refInfo.sysId);
+            if (refRecord.length) {
+                gs.info(']]>📥<![CDATA[ Fetched ' + refInfo.refTable);
+                this.safeUpsert(refRecord[0], refInfo.refTable, refInfo.sysId);
+            } else {
+                gs.warn('❌ NO SOURCE RECORD: ' + refInfo.refTable + '/' + refInfo.sysId);
+            }
+        }
+       
+        // ]]>🔥<![CDATA[ STEP 4: Insert MAIN record
+        gs.info(']]>🔗<![CDATA[ STEP 4: Inserting main ' + table + ' record');
+        var mainResult = this.safeUpsertWithForce(recordData, table, sysId);
+       
+        return mainResult ? 'SUCCESS' : 'FAILED';
+    },
+ 
+    // ]]>🔥<![CDATA[ Remove duplicate reference fields across all parent tables
+    removeDuplicates: function(fields) {
+        var unique = [];
+        var seen = {};
+        for (var i = 0; i < fields.length; i++) {
+            if (!seen[fields[i].element]) {
+                seen[fields[i].element] = true;
+                unique.push(fields[i]);
+            }
+        }
+        return unique;
+    },
+ 
+    // ]]>🔥<![CDATA[ NEW: Remove duplicate related lists
+    removeDuplicateRelatedLists: function(relatedLists) {
+        var unique = [];
+        var seen = {};
+        for (var i = 0; i < relatedLists.length; i++) {
+            var key = relatedLists[i].related_table;
+            if (!seen[key]) {
+                seen[key] = true;
+                unique.push(relatedLists[i]);
+            }
+        }
+        return unique;
+    },
+ 
+    // ]]>🔥<![CDATA[ EXISTING: Get reference fields using sys_dictionary
+    getDynamicReferenceFields: function(table) {
+        var grDict = new GlideRecord('sys_dictionary');
+        grDict.addQuery('name', table);
+        grDict.addQuery('internal_type', 'reference');
+        grDict.query();
+       
+        var refFields = [];
+        while (grDict.next()) {
+            refFields.push({
+                element: grDict.getValue('element'),
+                reference: { value: grDict.getValue('reference') }
+            });
+        }
+        return refFields;
+    },
+ 
+    // ]]>🔥<![CDATA[ NEW: Get ALL related lists for a table using sys_ui_related_list
+    getDynamicRelatedLists: function(table) {
+        var grDict = new GlideRecord('sys_ui_related_list');
+        grDict.addQuery('name', table);  // Parent table where related list appears
+        grDict.query();
+       
+        var relatedLists = [];
+        while (grDict.next()) {
+            var rlSysId = grDict.getValue('sys_id');
+           
+            // Get the related_list_entry to find relationship
+            var entryGr = new GlideRecord('sys_ui_related_list_entry');
+            entryGr.addQuery('related_list', rlSysId);
+            entryGr.query();
+           
+            while (entryGr.next()) {
+                var relName = entryGr.getValue('related_list');
+                if (relName) {
+                    // Get relationship details from sys_relationship_list
+                    var relGr = new GlideRecord('sys_relationship_list');
+                    if (relGr.get(relName)) {
+                        var childTable = relGr.getValue('queries_from');
+                        if (childTable) {
+                            relatedLists.push({
+                                name: grDict.getDisplayValue('name') + ' → ' + relGr.getDisplayValue('name'),
+                                related_table: childTable
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        return relatedLists;
+    },
+ 
+    extractSysId: function(value) {
+        if (typeof value === 'string') return value;
+        if (typeof value === 'object' && value !== null) {
+            if (value.value !== undefined) return value.value;
+            if (value.sys_id !== undefined) return value.sys_id;
+            if (value.link) {
+                var match = value.link.match(/\\\\+([a-f0-9-]{32,36})/);
+                return match ? match[1] : null;
+            }
+            if (value.displayValue !== undefined) return value.displayValue;
+        }
+        return null;
+    },
+ 
+    isDateField: function(table, field) {
+        var dict = new GlideRecord('sys_dictionary');
+        dict.addQuery('name', table);
+        dict.addQuery('element', field);
+        dict.query();
+        if (dict.next()) {
+            var type = dict.getValue('internal_type');
+            return type == 'glide_date_time' || type == 'glide_date' || type == 'glide_time';
+        }
+        return false;
+    },
+ 
+    isSkipField: function(table, field, value) {
+        var skipFields = ['country', 'preferred_language', 'state', 'zip'];
+        if (skipFields.indexOf(field) >= 0) return true;
+        if (typeof value === 'object' || value === '[object Object]') return true;
+        return false;
+    },
+ 
+    findRecordSysId: function(baseUrl, table, username, pswd, recordId) {
+        var records = this.fetchRecords(baseUrl, table, username, pswd, null, 'number', recordId);
+        if (records.length) return records[0].sys_id;
+        records = this.fetchRecords(baseUrl, table, username, pswd, recordId);
+        if (records.length) return recordId;
+        return null;
+    },
+ 
+    fetchRecords: function(baseUrl, table, username, pswd, sysId, qField, qValue) {
+        var api = new sn_ws.RESTMessageV2();
+        api.setEndpoint(baseUrl + '/api/now/table/' + table);
+        api.setHttpMethod('GET');
+        api.setBasicAuth(username, pswd);
+       
+        if (sysId) {
+            api.setQueryParameter('sysparm_query', 'sys_id=' + sysId);
+            // api.setQueryParameter('sysparm_limit', '1');
+            api.setQueryParameter('sysparm_display_value', 'all');
+        } else if (qField && qValue) {
+            api.setQueryParameter('sysparm_query', qField + '=' + qValue);
+            // api.setQueryParameter('sysparm_limit', '1');
+        } 
+       
+        var response = api.execute();
+        if (response.getStatusCode() !== 200) {
+            gs.error('REST failed [' + table + ']: ' + response.getStatusCode());
+            return [];
+        }
+       
+        try {
+            var data = JSON.parse(response.getBody());
+			gs.info(JSON.stringify(data));
+            return data.result || [];
+        } catch(e) {
+            gs.error('JSON parse error: ' + e);
+            return [];
+        }
+    },
+ 
+    safeUpsert: function(data, table, sysId) {
+        var gr = new GlideRecord(table);
+        gr.setWorkflow(false);
+        gr.autoSysFields(false);
+       
+        var isUpdate = sysId && gr.get(sysId);
+        if (!isUpdate) {
+            gr.initialize();
+            if (sysId) gr.setNewGuidValue(sysId);
+        }
+       
+        var setCount = 0;
+        for (var field in data) {
+            var value = data[field];
+           
+            if (value === null || value === '' || value === undefined || value === '[object Object]') continue;
+            if (Array.isArray(value)) continue;
+           
+            if (typeof value === 'object' && value !== null) {
+                var sysIdValue = value.value || value.sys_id || null;
+                if (sysIdValue) {
+                    gs.info(']]>📎<![CDATA[ Setting ref ' + field + ': ' + sysIdValue);
+                    try {
+                        gr.setValue(field, sysIdValue);
+                        setCount++;
+                    } catch(e) {
+                        gs.warn('Ref set failed ' + field + ': ' + e);
+                    }
+                    continue;
+                }
+                value = value.displayValue || value.value || null;
+                if (!value || value === '[object Object]') continue;
+            }
+           
+            if (this.isSkipField(table, field, value)) continue;
+           
+            try {
+                if (this.isDateField(table, field) && (typeof value === 'object' || !value)) continue;
+                gr.setValue(field, value);
+                setCount++;
+            } catch(e) {
+                gs.warn('Skip field ' + field + ': ' + e);
+            }
+        }
+       
+        var result = gr.update();
+        gs.info('✅ SAVED REF ' + table + '/' + sysId + ' (' + setCount + ' fields)');
+        return result;
+    },
+ 
+    safeUpsertWithForce: function(data, table, sysId) {
+        var gr = new GlideRecord(table);
+        gr.setWorkflow(false);
+        gr.autoSysFields(false);
+        gr.setForceUpdate(true);
+       
+        var isUpdate = sysId && gr.get(sysId);
+        if (!isUpdate) {
+            gr.initialize();
+            if (sysId) gr.setNewGuidValue(sysId);
+        }
+       
+        var refCount = 0;
+        for (var field in data) {
+            var value = data[field];
+            if (value === null || value === '' || value === undefined || value === '[object Object]') continue;
+           
+            var sysIdValue = this.extractSysId(value);
+            try {
+                if (sysIdValue) {
+                    gr.setValue(field, sysIdValue);
+                    gs.info(']]>📎<![CDATA[ ✅ INSERTED ' + field + ': ' + sysIdValue);
+                    refCount++;
+                } else {
+                    if (this.isDateField(table, field) && (typeof value === 'object' || !value)) continue;
+                    if (this.isSkipField(table, field, value)) continue;
+                    gr.setValue(field, value);
+                }
+            } catch(e) {
+                gs.warn('Skip ' + field + ': ' + e);
+            }
+        }
+       
+        var result = gr.update();
+        var finalSysId = gr.getValue('sys_id');
+        gs.info('✅ MAIN SAVED ' + table + '/' + finalSysId + ' - ' + refCount + ' refs');
+        return result;
+    },
+ 
+    // ]]>🔥<![CDATA[ UPDATED: List ALL reference fields AND related lists
+    listAllReferences: function(parentTables) {
+        gs.info('=== ALL REFERENCE FIELDS ===');
+        var parentTablesArray = parentTables || ['task'];
+        if (typeof parentTablesArray === 'string') parentTablesArray = [parentTablesArray];
+       
+        for (var p = 0; p < parentTablesArray.length; p++) {
+            var refs = this.getDynamicReferenceFields(parentTablesArray[p]);
+            gs.info(']]>📋<![CDATA[ ' + parentTablesArray[p] + ' (' + refs.length + ' refs):');
+            for (var i = 0; i < refs.length; i++) {
+                gs.info('  ]]>📌<![CDATA[ ' + refs[i].element + ' → ' + refs[i].reference.value);
+            }
+        }
+        return 'Listed all references';
+    },
+ 
+    // ]]>🔥<![CDATA[ NEW: List ALL related lists from specified tables
+    listAllRelatedLists: function(parentTables) {
+        gs.info('=== ALL RELATED LISTS ===');
+        var parentTablesArray = parentTables || ['task'];
+        if (typeof parentTablesArray === 'string') parentTablesArray = [parentTablesArray];
+       
+        for (var p = 0; p < parentTablesArray.length; p++) {
+            var relLists = this.getDynamicRelatedLists(parentTablesArray[p]);
+            gs.info(']]>🔗<![CDATA[ ' + parentTablesArray[p] + ' (' + relLists.length + ' related lists):');
+            for (var i = 0; i < relLists.length; i++) {
+                gs.info('  ]]>📌<![CDATA[ ' + relLists[i].name + ' → ' + relLists[i].related_table);
+            }
+        }
+        return 'Listed all related lists';
+    },
+ 
+    testMigration: function(sourceurl, username, pswd, table, record, parentTables) {
+        gs.info(']]>🧪<![CDATA[ === FULLY DYNAMIC TEST START ===');
+        this.listAllReferences(parentTables);  // ]]>🔥<![CDATA[ Shows ALL refs from ALL parent tables
+        this.listAllRelatedLists(parentTables);  // ]]>🔥<![CDATA[ NEW: Shows ALL related lists
+        return this.insertRecords(sourceurl, username, pswd, table, record, parentTables);
+    },
+ 
+    type: 'dataMigration'
+};
+ 
+ 
+ 
+ ]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>irfan.wani</sys_created_by>
+        <sys_created_on>2026-02-23 08:52:25</sys_created_on>
+        <sys_id>35847e2c3b1b3290deb2090eb3e45a7c</sys_id>
+        <sys_mod_count>16</sys_mod_count>
+        <sys_name>dataMigration</sys_name>
+        <sys_package display_value="Data Migration" source="x_sysus_data_mig_0">9977a0f8eb03f610084cfd50dad0cd43</sys_package>
+        <sys_policy>read</sys_policy>
+        <sys_scope display_value="Data Migration">9977a0f8eb03f610084cfd50dad0cd43</sys_scope>
+        <sys_update_name>sys_script_include_35847e2c3b1b3290deb2090eb3e45a7c</sys_update_name>
+        <sys_updated_by>faizan.latief</sys_updated_by>
+        <sys_updated_on>2026-02-24 08:33:17</sys_updated_on>
+    </sys_script_include>
+</record_update>

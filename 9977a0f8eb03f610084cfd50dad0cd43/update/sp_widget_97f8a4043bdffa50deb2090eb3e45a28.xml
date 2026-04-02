@@ -1,0 +1,1097 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_widget">
+    <sp_widget action="INSERT_OR_UPDATE">
+        <category>custom</category>
+        <client_script><![CDATA[api.controller = function($scope, spModal) {
+
+    var c = this;
+
+    c.tables = [];
+    c.records = [];
+    c.fields = [];          // ⭐ NEW
+    c.selectedTable = "";
+    c.selectedRecords = {};
+    c.loading = false;
+    c.loadingMessage = "";
+    c.result = "";
+
+    // ---------------- LOAD TABLES ----------------
+
+c.loadTables = function() {
+
+    c.loading = true;
+    c.loadingMessage = "Loading tables...";
+
+    c.server.get({ action: "load_tables" }).then(function(r){
+
+        console.log("Status:", r.data.status);
+        console.log("Length:", r.data.len);
+
+        if (r.data.success) {
+            console.log("Tables received:", r.data.len);
+            c.tables = r.data.tables;
+        } else {
+            console.log("Error:", r.data.error);
+        }
+
+        c.loading = false;
+    });
+};
+
+    // ---------------- LOAD RECORDS ----------------
+
+    c.loadRecords = function() {
+
+        if (!c.selectedTable) return;
+
+        c.loading = true;
+        c.loadingMessage = "Loading records...";
+
+        // existing record loading
+        c.server.get({
+            action: 'getRecords',
+            table: c.selectedTable
+        }).then(function(response) {
+            c.records = response.data.records || [];
+            c.selectedRecords = {};
+            c.selectAll = false;
+            c.loading = false;
+        });
+
+        // ⭐ NEW : LOAD FIELDS
+        c.server.get({
+            action: "get_fields",
+            table: c.selectedTable
+        }).then(function(res){
+            if(res.data.success)
+                c.fields = res.data.fields;
+        });
+    };
+
+    // ---------------- SELECT ALL ----------------
+
+    c.toggleAll = function(val) {
+        c.getFilteredRecords().forEach(function(rec){
+            c.selectedRecords[rec.sys_id] = val;
+        });
+    };
+
+    // ---------------- MIGRATE ----------------
+
+    c.migrate = function() {
+
+        var selected = [];
+
+        angular.forEach(c.selectedRecords, function(value, key) {
+            if (value) selected.push(key);
+        });
+
+        if (!selected.length) {
+            alert("Please select records");
+            return;
+        }
+
+        c.loading = true;
+        c.loadingMessage = "Migrating records...";
+
+        c.server.get({
+            action: 'migrate',
+            table: c.selectedTable,
+            records: selected
+        }).then(function(response) {
+
+            c.loading = false;
+
+            var totalSelected = selected.length;
+            var successCount = response.data.migrated || 0;
+            var failedCount = totalSelected - successCount;
+
+            spModal.open({
+                title: "Migration Summary",
+                message:
+                    "<b>Total Selected:</b> " + totalSelected + "<br>" +
+                    "<b style='color:green'>Success:</b> " + successCount + "<br>" +
+                    "<b style='color:red'>Failed:</b> " + failedCount,
+                buttons: [{ label: "Close", primary: true }]
+            });
+        });
+    };
+
+    // ==================================================
+    // ---------------- FILTER SYSTEM -------------------
+    // ==================================================
+
+    c.showFilter = false;
+
+    c.filterConditions = [{
+        field: '',
+        operator: '=',
+        value: '',
+        condition: 'AND'
+    }];
+
+    c.appliedFilters = [];
+
+    c.toggleFilter = function() {
+        c.showFilter = !c.showFilter;
+    };
+
+    // ⭐ ADD AND / OR CONDITION
+    c.addCondition = function(type) {
+        c.filterConditions.push({
+            field: '',
+            operator: '=',
+            value: '',
+            condition: type || 'AND'
+        });
+    };
+
+    c.removeCondition = function(i) {
+        c.filterConditions.splice(i, 1);
+    };
+
+    c.clearAllFilters = function(){
+        c.appliedFilters = [];
+        c.filterConditions = [{
+            field: '',
+            operator: '=',
+            value: '',
+            condition: 'AND'
+        }];
+    };
+
+    c.applyFilters = function() {
+
+        c.appliedFilters = angular.copy(c.filterConditions)
+            .filter(function(f){
+                return f.field && f.value !== '';
+            });
+
+        c.showFilter = false;
+    };
+
+    // ---------------- DYNAMIC OPERATORS ----------------
+
+    c.operatorMap = {
+
+        string: [
+            {value:'=', label:'is'},
+            {value:'!=', label:'is not'},
+            {value:'CONTAINS', label:'contains'},
+            {value:'STARTSWITH', label:'starts with'},
+            {value:'ENDSWITH', label:'ends with'}
+        ],
+
+        reference: [
+            {value:'=', label:'is'},
+            {value:'!=', label:'is not'},
+            {value:'ISEMPTY', label:'is empty'},
+            {value:'ISNOTEMPTY', label:'is not empty'}
+        ],
+
+        boolean: [
+            {value:'=', label:'is'}
+        ],
+
+        glide_date_time: [
+            {value:'ON', label:'on'},
+            {value:'BEFORE', label:'before'},
+            {value:'AFTER', label:'after'}
+        ]
+    };
+
+    c.getOperators = function(f){
+
+        if(!f.field) return [];
+
+        var fieldObj = c.fields.find(function(x){
+            return x.name === f.field;
+        });
+
+        if(!fieldObj) return c.operatorMap.string;
+
+        return c.operatorMap[fieldObj.type]
+            || c.operatorMap.string;
+    };
+	
+	//--------------- Get Label -------------------
+	c.getStateLabel = function(state) {
+    var map = {
+        '1': 'New',
+        '2': 'In Progress',
+        '3': 'On Hold',
+        '6': 'Resolved',
+        '7': 'Closed',
+        '8': 'Canceled'
+    };
+    return map[state] || state;
+};
+
+    // ---------------- FILTER EXECUTION ----------------
+
+    c.getFilteredRecords = function() {
+
+    if (!c.appliedFilters.length)
+        return c.records;
+
+    return c.records.filter(function(r){
+
+        var result = null;
+
+        c.appliedFilters.forEach(function(f, index){
+
+            var recordValue;
+
+            // ⭐ Special handling for state field
+            if (f.field === 'state') {
+                recordValue = c.getStateLabel(r.state);
+            } else {
+                recordValue = r[f.field] || '';
+            }
+
+            recordValue = recordValue
+                .toString()
+                .toLowerCase()
+                .trim();
+
+            var filterValue = (f.value || '')
+                .toString()
+                .toLowerCase()
+                .trim();
+
+            var match = false;
+
+            switch(f.operator){
+                case '=':
+                    match = recordValue === filterValue;
+                    break;
+
+                case 'CONTAINS':
+                    match = recordValue.indexOf(filterValue) > -1;
+                    break;
+
+                case 'STARTSWITH':
+                    match = recordValue.startsWith(filterValue);
+                    break;
+
+                case 'ENDSWITH':
+                    match = recordValue.endsWith(filterValue);
+                    break;
+            }
+
+            if(index === 0)
+                result = match;
+            else if(f.condition === 'AND')
+                result = result && match;
+            else
+                result = result || match;
+
+        });
+
+        return result;
+    });
+};
+    c.loadTables();
+};]]></client_script>
+        <controller_as>c</controller_as>
+        <css>.search-wrapper {
+  margin-bottom: 15px;
+  display: flex;
+  gap:10px;
+}
+
+.search-wrapper input[type="text"], select {
+  padding: 12px 16px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 15px;
+  background-color: #ffffff;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: #1e293b;
+  outline: none;
+  appearance: none; /* Removes default browser styling */
+}
+.search-wrapper input[type="text"]{
+	width:260px;
+}
+.search-wrapper select{
+	flex:1;
+}
+input[type="text"]:focus, select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+  transform: translateY(-1px);
+}
+
+select {
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  padding-right: 40px;
+}
+/* ======================================================
+   MAIN LAYOUT
+====================================================== */
+.migration-wrapper {
+  display: flex;              /* 🔥 IMPORTANT */
+  align-items: flex-start;
+  background: #fff;
+  padding: 0px;
+  border-radius: 0px;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.05);
+}
+
+/* Sidebar */
+.side-slot{
+	width:260px;
+  flex-shrink:0;
+}
+/* Right Content */
+.migration-content {
+  flex: 1;                  /* Take remaining width */
+  padding:30px;
+}
+.rec-con{
+	padding:10px;
+
+}
+.sec-rec{
+    box-shadow: 0 0 10px #f3f3f3;
+}
+.rec{
+max-height:500px;
+  overflow-y:scroll;
+
+}
+/* Inputs styling (optional clean look) */
+.migration-content input,
+.migration-content select {
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+/* Sidebar width */
+.dm-sidebar-slot {
+  display:flex;
+  width: 260px;
+  flex-shrink: 0;
+}
+/* ======================================================
+   INPUTS
+====================================================== */
+input,
+select {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 12px;
+    box-sizing: border-box;
+}
+
+/* ======================================================
+   BUTTONS
+====================================================== */
+button {
+    background: #0070f3;
+    color: #fff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+/* ======================================================
+   ACTION BAR
+====================================================== */
+.actions {
+    display: flex;
+  gap:10px;
+    align-items: center;
+    justify-content: space-between;
+    margin: 15px 0;
+}
+
+/* ======================================================
+   FILTER SECTION
+====================================================== */
+.record-filter {
+    margin-top: 15px;
+}
+
+/* FILTER CONTAINER */
+.record-filter &gt; div {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+}
+
+/* EACH CONDITION ROW */
+.record-filter &gt; div &gt; div,
+.filter-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f5f7fa;
+    padding: 8px;
+    border-radius: 6px;
+}
+
+/* FILTER INPUT SIZE */
+.record-filter select,
+.record-filter input {
+    width: auto;
+    flex: 1;
+    margin-bottom: 0;
+}
+
+/* REMOVE BUTTON */
+.record-filter button[ng-click^="c.removeCondition"] {
+    padding: 6px 10px;
+    background: #ff4d4f;
+}
+
+/* ======================================================
+   ✅ CONDITION LABELS (REAL AND / OR)
+====================================================== */
+.condition-label {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 4px;
+}
+
+/* AND */
+.condition-label.and {
+    background: #e7f3ff;
+    color: #0b5ed7;
+}
+
+/* OR */
+.condition-label.or {
+    background: #fff3cd;
+    color: #856404;
+}
+
+/* ======================================================
+   TABLE
+====================================================== */
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+td {
+    padding: 8px;
+    border-bottom: 1px solid #eee;
+}
+
+/* ======================================================
+   RESULT MESSAGE
+====================================================== */
+.result {
+    margin-top: 15px;
+    padding: 10px;
+    background: #e6f4ea;
+    border-radius: 6px;
+}
+
+/* ======================================================
+   LOADER
+====================================================== */
+.loader-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255,255,255,0.7);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid #ddd;
+    border-top: 5px solid #0072c6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.loading-text {
+    margin-top: 15px;
+    font-weight: bold;
+    color: #0072c6;
+}
+
+@keyframes spin {
+    100% { transform: rotate(360deg); }
+}
+
+/* ======================================================
+   CUSTOM MODAL OVERLAY
+====================================================== */
+.custom-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.custom-modal-box {
+  background: #ffffff;
+  width: 400px;
+  max-width: 90%;
+  padding: 25px;
+  border-radius: 10px;
+  text-align: center;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+  animation: popup 0.3s ease-in-out;
+}
+
+.modal-summary {
+  background: #f4f6f9;
+  padding: 15px;
+  margin: 15px 0;
+  border-radius: 6px;
+}
+
+.success-text { color: #28a745; }
+.error-text { color: #dc3545; }
+
+.close-btn {
+  background: #007bff;
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  width: 100%;
+}
+
+.close-btn:hover {
+  background: #0056b3;
+}
+
+@keyframes popup {
+  from { transform: scale(0.8); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* ======================================================
+   SERVICENOW MODAL STYLE
+====================================================== */
+.modal-backdrop {
+    background-color: rgba(0, 0, 0, 0.65) !important;
+}
+
+.modal-content {
+    border-radius: 14px !important;
+    border: none !important;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.25) !important;
+    overflow: hidden;
+    animation: smoothPopup 0.25s ease-out;
+}
+
+.modal-header {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: #fff !important;
+    border-bottom: none !important;
+    padding: 18px 24px !important;
+}
+
+.modal-title {
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.modal-header .close {
+    color: #fff !important;
+    opacity: 0.8;
+    font-size: 22px;
+}
+
+.modal-header .close:hover {
+    opacity: 1;
+}
+
+.modal-body {
+    padding: 25px !important;
+    font-size: 14px;
+    line-height: 1.6;
+    background-color: #f9fafc;
+}
+
+.modal-footer {
+    border-top: none !important;
+    padding: 15px 20px !important;
+    background: #f1f3f6;
+}
+
+.modal-footer .btn-primary {
+    background: #007bff;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 18px;
+    font-weight: 500;
+}
+
+.modal-footer .btn-primary:hover {
+    background: #0056b3;
+}
+
+.modal-body span[style*="background"] {
+    font-weight: 600;
+    min-width: 32px;
+    text-align: center;
+    display: inline-block;
+}
+
+@keyframes smoothPopup {
+    from { transform: translateY(-10px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* Container with Mesh Gradient Background */
+.migration-hero-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 60px 20px;
+  background-color: #f8fafc;
+  background-image: 
+    linear-gradient(135deg, #1f5fbf, #0b5db3),
+    radial-gradient(at 100% 100%, rgba(255,255,255,0.12) 0px, transparent 50%);
+  border-radius: 24px;
+  margin-bottom: 30px;
+  overflow: hidden;
+  position: relative;
+  border-radius:20px;
+}
+
+/* Glassmorphism Card */
+.hero-content {
+  text-align: center;
+  max-width: 800px;
+  padding: 40px;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 30px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
+  animation: slideUp 0.8s ease-out forwards;
+}
+
+/* Pulsing Icon */
+.hero-icon-pulse {
+  width: 60px;
+  height: 60px;
+  background: #2563eb;
+  color: white;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  font-size: 24px;
+  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.3);
+  animation: pulseRotate 3s infinite ease-in-out;
+}
+
+.hero-title {
+  font-size: 42px;
+  font-weight: 800;
+  margin-bottom: 15px;
+  background: linear-gradient(135deg, #1e293b 0%, #2563eb 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: -1px;
+}
+
+.hero-subtitle {
+  font-size: 18px;
+  color: #64748b;
+  line-height: 1.6;
+  margin-bottom: 25px;
+  animation: fadeIn 1.2s ease-in forwards;
+}
+
+.hero-line {
+  width: 60px;
+  height: 4px;
+  background: #2563eb;
+  margin: 0 auto;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.hero-content:hover .hero-line {
+  width: 120px;
+}
+
+/* ANIMATIONS */
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes pulseRotate {
+  0% { transform: scale(1) rotate(0deg); }
+  50% { transform: scale(1.1) rotate(5deg); box-shadow: 0 15px 30px rgba(37, 99, 235, 0.5); }
+  100% { transform: scale(1) rotate(0deg); }
+}</css>
+        <data_table>sp_instance</data_table>
+        <demo_data/>
+        <description/>
+        <docs/>
+        <field_list/>
+        <has_preview>true</has_preview>
+        <id/>
+        <internal>false</internal>
+        <link><![CDATA[function link(scope, element, attrs, controller) {
+  
+}]]></link>
+        <name>data migration browse tables</name>
+        <option_schema/>
+        <public>false</public>
+        <roles/>
+        <script><![CDATA[(function () {
+    data.sideBar= $sp.getWidget('dmm_sidebar');
+    var sysId = $sp.getParameter('sys_id');
+    var Username, pswd, Url;
+
+    var gr = new GlideRecord('x_sysus_data_mig_0_connection');
+    gr.addQuery('sys_id', sysId);
+    gr.query();
+
+    if(gr.next()) {
+        Username = gr.getValue('username');
+        Url = gr.getValue('url');
+        pswd = gr.getValue('password');
+    }
+
+    // ---------- LOAD TABLES ----------
+
+if (input && input.action === 'load_tables') {
+
+    try {
+
+        var api = new sn_ws.RESTMessageV2();
+        api.setEndpoint(Url + '/api/now/table/sys_db_object');
+        api.setHttpMethod('GET');
+        api.setBasicAuth(Username, pswd);
+
+        // ]]>🔥<![CDATA[ ALWAYS SET DEFAULT QUERY
+        api.setQueryParameter('sysparm_query', 'active=true');
+        api.setQueryParameter('sysparm_fields', 'name,label');
+
+        var response = api.execute();
+
+        data.status = response.getStatusCode();
+        data.rawBody = response.getBody(); // ]]>🔥<![CDATA[ DEBUG
+
+        if (response.getStatusCode() == 200) {
+
+            var result = JSON.parse(response.getBody());
+
+            data.success = true;
+            data.tables = result.result || [];
+            data.len = data.tables.length;  // ✅ FIXED
+
+        } else {
+
+            data.success = false;
+            data.error = response.getBody();
+        }
+
+    } catch (e) {
+
+        data.success = false;
+        data.error = e.toString();
+    }
+}
+
+    // ---------- LOAD RECORDS ----------
+
+    if(input && input.action === 'getRecords') {
+
+        var dm_scpt = new global.dataMigration();
+        var res = dm_scpt.fetchRecords(Url, input.table, Username, pswd);
+				if(res) {
+					data.success = true;
+					data.records = res;
+				}
+        else{
+            data.success = false;
+						data.records = [];
+        }
+    }
+
+    // =====================================================
+    // ⭐ NEW BLOCK — GET TABLE FIELDS (NO LOGIC CHANGED)
+    // =====================================================
+
+    if(input && input.action === 'get_fields') {
+
+        var fields = [];
+
+        var tableGR = new GlideRecord(input.table);
+        tableGR.initialize();
+
+        var elements = tableGR.getElements();
+
+        for (var i = 0; i < elements.length; i++) {
+
+            var el = elements[i];
+            var ed = el.getED();
+
+            fields.push({
+                name: el.getName(),
+                label: el.getLabel(),
+                type: ed.getInternalType() // needed for dynamic operators
+            });
+        }
+
+        data.success = true;
+        data.fields = fields;
+    }
+
+    // ---------- MIGRATE ----------
+
+    if (input && input.action === 'migrate') {
+
+        var migratedCount = 0;
+        var migscpt = new global.dataMigration();
+
+        if (input.records && input.records.length > 0) {
+
+            for (var j = 0; j < input.records.length; j++) {
+
+                var success = migscpt.testMigration(
+                    Url,
+                    Username,
+                    pswd,
+                    input.table,
+                    input.records[j]
+                );
+
+                if (success) {
+                    migratedCount++;
+                }
+            }
+        }
+
+        data.success = migratedCount > 0;
+        data.migrated = migratedCount;
+    }
+
+})();]]></script>
+        <servicenow>false</servicenow>
+        <sys_class_name>sp_widget</sys_class_name>
+        <sys_created_by>iqra.magray</sys_created_by>
+        <sys_created_on>2026-02-21 09:24:39</sys_created_on>
+        <sys_id>97f8a4043bdffa50deb2090eb3e45a28</sys_id>
+        <sys_mod_count>299</sys_mod_count>
+        <sys_name>data migration browse tables</sys_name>
+        <sys_package display_value="Data Migration" source="x_sysus_data_mig_0">9977a0f8eb03f610084cfd50dad0cd43</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Data Migration">9977a0f8eb03f610084cfd50dad0cd43</sys_scope>
+        <sys_update_name>sp_widget_97f8a4043bdffa50deb2090eb3e45a28</sys_update_name>
+        <sys_updated_by>irfan.wani</sys_updated_by>
+        <sys_updated_on>2026-02-26 19:06:16</sys_updated_on>
+        <template><![CDATA[<div class="migration-wrapper">
+   <!-- LEFT SIDEBAR -->
+  <div class="side-slot">
+    <sp-widget widget="data.sideBar"></sp-widget>
+  </div>
+  <!-- RIGHT CONTENT -->
+  <div class="migration-content">
+  <!-- ]]>🔄<![CDATA[ LOADER -->
+  <div class="loader-overlay" ng-if="c.loading">
+      <div class="spinner"></div>
+      <div class="loading-text">{{c.loadingMessage}}</div>
+  </div>
+<div class="migration-hero-container">
+  <div class="hero-content">
+    <div class="hero-icon-pulse">
+      <i class="fa fa-exchange"></i>
+    </div>
+    <h1 class="hero-title">
+      Smart Data Migration
+    </h1>
+    <p class="hero-subtitle">
+      Select tables, filter records, and migrate seamlessly between environments.
+    </p>
+    <div class="hero-line"></div>
+  </div>
+</div>
+<div class="search-wrapper">
+  <select ng-model="c.selectedTable"
+        ng-change="c.loadRecords()">
+    
+ <option value=""
+            disabled
+            selected
+            >
+        Select Table
+    </option>
+    
+    <option ng-repeat="t in c.tables | filter:c.search | limitTo: 100"
+            value="{{t.name}}">
+        {{t.label}} ({{t.name}})
+    </option>
+</select>
+  <input type="text"
+         placeholder="Search table..."
+         ng-model="c.search"
+         ng-model-options="{ debounce: 300 }"> 
+
+
+</div>
+ <!-- ]]>🔍<![CDATA[ FILTER SECTION -->
+<div ng-if="c.selectedTable" class="record-filter">
+
+  <button type="button" ng-click="c.toggleFilter()">
+    {{c.showFilter ? 'Hide Filters' : 'Add Filter'}}
+  </button>
+
+  <div ng-if="c.showFilter">
+
+    <!-- FILTER ROW -->
+    <div ng-repeat="f in c.filterConditions track by $index"
+         class="filter-row">
+
+      <!-- AND / OR LABEL -->
+      <span class="condition-label"
+            ng-if="$index > 0">
+        {{f.condition}}
+      </span>
+
+      <!-- ⭐ DYNAMIC FIELD LIST -->
+      <select ng-model="f.field">
+        <option value="">-- choose field --</option>
+
+        <option ng-repeat="field in c.fields"
+                value="{{field.name}}">
+          {{field.label}}
+        </option>
+      </select>
+
+      <!-- ⭐ DYNAMIC OPERATORS -->
+      <select ng-model="f.operator"
+              ng-options="op.value as op.label for op in c.getOperators(f)">
+      </select>
+
+      <!-- VALUE -->
+      <input type="text" ng-model="f.value">
+
+      <!-- REMOVE -->
+      <button type="button"
+              ng-click="c.removeCondition($index)">
+        X
+      </button>
+
+    </div>
+
+    <!-- ACTION BUTTONS -->
+    <div class="filter-actions">
+
+      <button type="button"
+              ng-click="c.addCondition('AND')">
+        + AND
+      </button>
+
+      <button type="button"
+              ng-click="c.addCondition('OR')">
+        + OR
+      </button>
+
+      <button type="button" ng-click="c.applyFilters()">
+        Apply
+      </button>
+
+      <button type="button" ng-click="c.clearAllFilters()">
+        Clear
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+  <!-- ]]>📄<![CDATA[ RECORD TABLE -->
+  <div ng-if="c.records.length" class="rec-con" >
+<div class="sec-rec">
+  
+    </div>
+    <div class="actions">
+      <label>
+        <input type="checkbox"
+               ng-model="c.selectAll"
+               ng-change="c.toggleAll(c.selectAll)">
+        Select All
+      </label>
+
+      <button ng-click="c.migrate()">
+        Migrate Selected
+      </button>
+    </div>
+		<div class="rec">
+    <table >
+      <tr>
+        <th>Select</th>
+        <th>Number</th>
+        <th>SysID</th>
+        <th>State</th>
+        <th>Active</th>
+        <th>Short Description</th>
+      </tr>
+      <tr ng-repeat="r in c.getFilteredRecords() track by r.sys_id">
+        <td>
+          <input type="checkbox"
+                 ng-model="c.selectedRecords[r.sys_id]">
+        </td>
+        <td>{{r.display_value || r.number || r.name}}</td>
+        <td>{{r.sys_id}}</td>
+        <td>{{ c.getStateLabel(r.state) }}</td>
+        <td>{{r.active}}</td>
+        <td>{{r.short_description}}</td>
+      </tr>
+    </table>
+</div>
+    </div>
+  </div>
+
+  <div ng-if="c.result" class="result">
+    {{c.result}}
+  </div>
+  
+  </div>
+</div>]]></template>
+    </sp_widget>
+</record_update>

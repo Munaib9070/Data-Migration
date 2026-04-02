@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_number">
+    <sys_number action="INSERT_OR_UPDATE">
+        <category display_value="" name="x_sysus_data_mig_0_x_sysus_data_mig_0_notifications">x_sysus_data_mig_0_x_sysus_data_mig_0_notifications</category>
+        <maximum_digits>7</maximum_digits>
+        <number>1000</number>
+        <prefix>NOT</prefix>
+        <sys_class_name>sys_number</sys_class_name>
+        <sys_created_by>bareen.makhdoomi</sys_created_by>
+        <sys_created_on>2026-03-24 10:21:21</sys_created_on>
+        <sys_id>dd5f540e3b737e103509f3cc73e45a81</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>NOT</sys_name>
+        <sys_package display_value="Data Migration" source="x_sysus_data_mig_0">9977a0f8eb03f610084cfd50dad0cd43</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Data Migration">9977a0f8eb03f610084cfd50dad0cd43</sys_scope>
+        <sys_update_name>sys_number_dd5f540e3b737e103509f3cc73e45a81</sys_update_name>
+        <sys_updated_by>bareen.makhdoomi</sys_updated_by>
+        <sys_updated_on>2026-03-24 10:21:21</sys_updated_on>
+    </sys_number>
+</record_update>

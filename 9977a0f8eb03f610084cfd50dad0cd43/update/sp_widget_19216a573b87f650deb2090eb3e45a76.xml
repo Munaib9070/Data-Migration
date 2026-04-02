@@ -1,0 +1,997 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_widget">
+    <sp_widget action="INSERT_OR_UPDATE">
+        <category>custom</category>
+        <client_script><![CDATA[api.controller = function ($scope) {
+
+    var c = this;
+
+    /* ================= INIT ================= */
+
+    c.searchText = "";
+    c.statusFilter = "";
+    c.timeFilter = "";
+
+    c.runs = c.data.runs || [];
+    c.stats = c.data.stats || {};
+
+    c.selectedRun = null;
+
+    /* ================= PAGINATION ================= */
+
+    c.currentPage = 1;
+    c.pageSize = 10;
+
+    c.totalPages = function () {
+        return Math.ceil(c.filteredRuns().length / c.pageSize);
+    };
+
+    c.paginatedRuns = function () {
+        var start = (c.currentPage - 1) * c.pageSize;
+        var end = start + c.pageSize;
+        return c.filteredRuns().slice(start, end);
+    };
+
+    c.nextPage = function () {
+        if (c.currentPage < c.totalPages()) {
+            c.currentPage++;
+        }
+    };
+
+    c.prevPage = function () {
+        if (c.currentPage > 1) {
+            c.currentPage--;
+        }
+    };
+
+    /* ================= FILTER RUNS ================= */
+
+    c.filteredRuns = function () {
+
+        var result = [];
+        var now = new Date();
+
+        for (var i = 0; i < c.runs.length; i++) {
+
+            var r = c.runs[i];
+
+            /* -------- SAFE TABLE STRING -------- */
+            var tableString = (r.tables || []).join(',').toLowerCase();
+
+            /* -------- SEARCH -------- */
+            var matchSearch =
+                !c.searchText ||
+                (r.run_id && r.run_id.toLowerCase().indexOf(c.searchText.toLowerCase()) > -1) ||
+                tableString.indexOf(c.searchText.toLowerCase()) > -1;
+
+            /* -------- STATUS -------- */
+            var matchStatus =
+                c.statusFilter === "all" ||
+                !c.statusFilter ||
+                r.status === c.statusFilter;
+
+            /* -------- TIME FILTER -------- */
+            var matchTime = true;
+
+            if (c.timeFilter) {
+
+                var createdDate = new Date(r.created);
+
+                if (c.timeFilter === "today") {
+                    matchTime = createdDate.toDateString() === now.toDateString();
+                }
+
+                else if (c.timeFilter === "week") {
+                    var weekAgo = new Date();
+                    weekAgo.setDate(now.getDate() - 7);
+                    matchTime = createdDate >= weekAgo;
+                }
+
+                else if (c.timeFilter === "month") {
+                    var monthAgo = new Date();
+                    monthAgo.setMonth(now.getMonth() - 1);
+                    matchTime = createdDate >= monthAgo;
+                }
+            }
+
+            if (matchSearch && matchStatus && matchTime) {
+                result.push(r);
+            }
+        }
+
+        return result;
+    };
+
+    /* ================= RESET PAGE ON FILTER ================= */
+
+    $scope.$watchGroup(
+        ['c.searchText', 'c.statusFilter', 'c.timeFilter'],
+        function () {
+            c.currentPage = 1;
+        }
+    );
+
+    /* ================= CSV EXPORT ================= */
+
+    c.exportCSV = function () {
+
+        var runs = c.filteredRuns();
+
+        if (!runs.length) {
+            alert("No data available to export");
+            return;
+        }
+
+        var csv = "Migration ID,Tables,Records,Status,Duration,User,Instance,Date\n";
+
+        for (var i = 0; i < runs.length; i++) {
+
+            var r = runs[i];
+
+            var runId = '="' + (r.run_id || "") + '"';
+
+            var tables = (r.tables || []).join(" | ");
+            tables = '="' + tables.replace(/"/g, '""') + '"';
+
+            var records = '="' + ((r.records || 0) + "/" + (r.fetched || 0)) + '"';
+
+            var status = '="' + (r.status || "") + '"';
+            var duration = '="' + (r.duration || "") + '"';
+            var user = '="' + (r.user || "") + '"';
+            var instance = '="' + (r.instance || "") + '"';
+
+            var date = '="' + (r.created || "") + '"';
+
+            csv += [
+                runId,
+                tables,
+                records,
+                status,
+                duration,
+                user,
+                instance,
+                date
+            ].join(",") + "\n";
+        }
+
+        var blob = new Blob([csv], { type: "application/vnd.ms-excel" });
+
+        var url = URL.createObjectURL(blob);
+
+        var link = document.createElement("a");
+        link.href = url;
+
+        var today = new Date().toISOString().slice(0, 10);
+        link.download = "migration_history_" + today + ".csv";
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    //Status column
+    c.getStatusClass = function (rate) {
+
+        if (rate == 100) return 'success';
+        if (rate > 0) return 'warning';
+        if (rate == 0) return 'danger';
+
+        return '';
+    };
+
+    /* ================= ROW EXPAND ================= */
+
+    c.rerun = function (r) {
+
+        if (c.selectedRun && c.selectedRun.sys_id === r.sys_id) {
+            c.selectedRun = null;
+            return;
+        }
+
+        c.selectedRun = r;
+    };
+
+};]]></client_script>
+        <controller_as>c</controller_as>
+        <css>.sp-layout {
+  display: flex;
+  max-height: calc(100vh - 64px);
+position:relative;
+  background: linear-gradient(
+    to bottom right,
+    #ffffff 0%,
+    rgba(13, 124, 143, 0.05) 50%,
+    rgba(23, 162, 184, 0.10) 100%
+  );
+}
+
+/* SIDEBAR */
+.sp-modal .modal-dialog {
+  max-width: 420px !important;
+}
+
+.sp-modal .modal-content {
+  border-radius: 20px !important;
+  box-shadow: 0 25px 50px rgba(0,0,0,0.15) !important;
+  border: none !important;
+}
+
+.sp-modal .btn-success {
+  background: linear-gradient(135deg, #10b981, #34d399) !important;
+  border: none !important;
+  border-radius: 12px !important;
+  padding: 12px 28px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  transition: all 0.3s ease !important;
+}
+
+.sp-modal .btn-success:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4) !important;
+}
+
+.sidebar-area {
+  flex-basis: 260px;
+  flex-shrink:0;
+  height:100%;
+}
+
+/* MAIN */
+.dmm-history {
+position:relative;
+  display: flex;
+  flex-direction: column;
+  height:100%;
+  gap:30px;
+  margin: 0 auto;
+  overflow-y:auto;
+  height:calc(100vh - 64px);
+  width: 100%;
+  padding: 30px 15%;
+
+}
+@media(max-width:1600px){
+ .dmm-history {
+  	padding:30px;
+  }
+}
+/* HEADER */
+.dmm-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.dmm-header-row h2 {
+  font-weight: 600;
+  margin: 0;
+  color: #000000;
+}
+
+.dmm-header-row p {
+  margin: 5px 0 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.btn-export {
+  background: #1F8C95;          /* teal */
+  color: #fff;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: .2s ease;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* optional: fix icon alignment if using &lt;i&gt; */
+.btn-export i {
+  font-size: 14px;
+}
+
+/* darker hover */
+.btn-export:hover {
+  background: #166d75;          /* darker teal */
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(31, 140, 149, 0.35);
+}
+.fa{
+ font-size:20px;
+}
+
+/* STATS */
+.stats-row {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 25px;
+}
+
+.stat-card {
+  flex:1;
+  position:relative;
+  padding:22px;
+  border-radius:18px;
+  color:#1f2937;
+  overflow:hidden;
+  cursor:pointer;
+  transition: transform .35s ease, box-shadow .35s ease, background .35s ease;
+  box-shadow: 0 6px 18px rgba(0,0,0,.05);
+}
+
+/* TOTAL RUNS */
+.stat-card.gradient-blue {
+  background: linear-gradient(135deg, #e6f6f7, #f0fbfc);
+}
+
+/* SUCCESS */
+.stat-card.gradient-green {
+  background: linear-gradient(135deg, #dcfce7, #ecfdf5);
+}
+
+/* PARTIAL */
+.stat-card.gradient-orange {
+  background: linear-gradient(135deg, #fef3c7, #fffbeb);
+}
+
+/* FAILED */
+.stat-card.gradient-red {
+  background: linear-gradient(135deg, #fee2e2, #fef2f2);
+}
+
+.stat-icon {
+  position:absolute;
+  top:18px;
+  right:18px;
+  width:42px;
+  height:42px;
+  border-radius:12px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:18px;
+ 
+  color:#1F8C95;
+  transition:all .35s ease;
+}
+
+.one{
+  background:#2B7FFF;
+}
+.two{
+ background:#00BC7D;
+
+}
+
+.three{
+ background:#FE9A00;
+}
+.four{
+ background:#FB2C36;
+}
+.stat-title {
+  font-size:14px;
+  color:#6b7280;
+}
+
+.stat-value {
+  font-size:34px;
+  font-weight:700;
+  margin-top:6px;
+}
+
+.stat-sub {
+  font-size:13px;
+  margin-top:4px;
+  color:#6b7280;
+}
+
+.stat-card:hover {
+  transform:translateY(-8px);
+  box-shadow:0 18px 40px rgba(0,0,0,.12);
+}
+
+/* FILTER */
+.filter-bar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  width:100%;
+}
+.filter-bar input{
+	flex:4;
+}
+.filter-bar input,
+.filter-bar select {
+  padding: 8px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: white;
+}
+.filter-bar select{
+	flex:1;
+}
+.filter-bar input:focus,
+.filter-bar select:focus {
+  outline: none;
+  border-color: #1F8C95;
+  box-shadow: 0 0 0 2px rgba(31, 140, 149, 0.15);
+}
+
+.search-bar {
+  width:80%;
+}
+
+/* TABLE */
+.table-card {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+}
+
+.table-card h4 {
+  margin-bottom: 15px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th {
+  text-align: left;
+  font-size: 13px;
+  color: #6b7280;
+  padding-bottom: 10px;
+}
+
+td {
+  padding: 12px 0;
+  border-top: 1px solid #f1f5f9;
+  font-size: 14px;
+}
+
+/* LINK */
+.link {
+  color: #1F8C95;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+/* BADGE */
+.badge {
+  background: #e6f6f7;
+  color:#2563EB;
+  margin:2px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+/* ================= UPDATED STATUS (MATCH SCREENSHOT) ================= */
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 6px 14px;
+  border-radius: 999px;
+  width:fit-content;
+  font-size: 13px;
+  font-weight: 500;
+
+  background: #f3f4f6;
+}
+
+/* ICON SIZE */
+.status i {
+  font-size: 13px;
+}
+
+/* SUCCESS */
+.status.success {
+  background: #d1fae5;
+  color: #047857;
+}
+
+/* PARTIAL */
+.status.warning {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+/* FAILED */
+.status.danger {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+/* PREVIEW ICON */
+.preview:hover {
+  color:#1F8C95;
+}
+
+/* DETAILS */
+.details-grid {
+  display: flex;
+  gap: 20px;
+  align-items: stretch;
+}
+
+/* DETAIL CARDS */
+.detail-card {
+  flex: 1;
+  background: #fff;
+  padding: 20px;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-card h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+  font-weight: 600;
+  color: #1F8C95;
+}
+
+.detail-card h4 i {
+  font-size: 14px;
+  background: #e6f6f7;
+  color: #1F8C95;
+  padding: 6px;
+  border-radius: 6px;
+}
+
+.detail-card p {
+  margin: 8px 0 4px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.detail-card strong {
+  font-size: 15px;
+  margin-bottom: 10px;
+}
+
+.record-box {
+  background: #f3f4f6;
+  padding: 10px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+
+
+
+.detail-card:hover {
+  transform: translateY(-4px);
+  transition: 0.3s;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.pagination button {
+  background: #1F8C95;
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.pagination button:disabled {
+  background: #cbd5e1;
+  cursor: not-allowed;
+}
+
+.pagination button:hover:not(:disabled) {
+  background: #166d75;
+}
+
+.pagination span {
+  font-size: 14px;
+  color: #374151;
+}</css>
+        <data_table>sp_instance</data_table>
+        <demo_data/>
+        <description/>
+        <docs/>
+        <field_list/>
+        <has_preview>true</has_preview>
+        <id/>
+        <internal>false</internal>
+        <link><![CDATA[function link(scope, element, attrs, controller) {
+  
+}]]></link>
+        <name>DMM Migration History</name>
+        <option_schema/>
+        <public>false</public>
+        <roles/>
+        <script><![CDATA[(function () {
+
+    data.side = $sp.getWidget('dmm_sidebar');
+
+    data.runs = [];
+    data.stats = {
+        total: 0,
+        success: 0,
+        partial: 0,
+        failed: 0
+    };
+
+    var gr = new GlideRecord('x_sysus_data_mig_0_migration_details');
+    gr.addQuery('sys_created_by', gs.getUserName());
+    gr.orderByDesc('sys_created_on');
+    gr.query();
+
+    while (gr.next()) {
+
+        var tablesArr = [];
+        var tablesStr = gr.getValue('table');
+
+        /* ================= SAFE JSON PARSE ================= */
+        if (tablesStr) {
+            try {
+                var parsed = JSON.parse(tablesStr);
+
+                if (typeof parsed === "object") {
+                    tablesArr = Object.keys(parsed);
+                }
+
+            } catch (e) {
+                tablesArr = [tablesStr];
+            }
+        }
+
+        /* ================= SUCCESS RATE FROM FIELD ================= */
+        var successRate = parseFloat(gr.getValue('success_rate') || 0);
+
+        /* ================= DERIVE STATUS FROM SUCCESS RATE ================= */
+        var status = 'failed';
+
+        if (successRate == 100)
+            status = 'success';
+        else if (successRate > 0 && successRate < 100)
+            status = 'partial';
+        else
+            status = 'failed';
+
+        /* ================= PUSH DATA ================= */
+        data.runs.push({
+            sys_id: gr.getUniqueValue(),
+            run_id: gr.getValue('number'),
+            tables: tablesArr,
+            status: status,
+            records: parseInt(gr.getValue('records_inserted') || 0),
+            fetched: parseInt(gr.getValue('records_fetched') || 0),
+					  updated: parseInt(gr.getValue('records_updated') || 0),
+            duration: gr.getValue('duration'),
+            created: gr.getDisplayValue('sys_created_on'),
+
+            success_rate: successRate,
+
+            user: gr.getDisplayValue('sys_created_by'),
+            instance: gr.getValue('instance_url')
+        });
+
+        /* ================= STATS ================= */
+        data.stats.total++;
+
+        if (status === 'success')
+            data.stats.success++;
+        else if (status === 'partial')
+            data.stats.partial++;
+        else if (status === 'failed')
+            data.stats.failed++;
+    }
+
+})();]]></script>
+        <servicenow>false</servicenow>
+        <sys_class_name>sp_widget</sys_class_name>
+        <sys_created_by>bareen.makhdoomi</sys_created_by>
+        <sys_created_on>2026-02-19 10:14:07</sys_created_on>
+        <sys_id>19216a573b87f650deb2090eb3e45a76</sys_id>
+        <sys_mod_count>198</sys_mod_count>
+        <sys_name>DMM Migration History</sys_name>
+        <sys_package display_value="Data Migration" source="x_sysus_data_mig_0">9977a0f8eb03f610084cfd50dad0cd43</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Data Migration">9977a0f8eb03f610084cfd50dad0cd43</sys_scope>
+        <sys_update_name>sp_widget_19216a573b87f650deb2090eb3e45a76</sys_update_name>
+        <sys_updated_by>munaib.ashraf</sys_updated_by>
+        <sys_updated_on>2026-04-01 10:40:25</sys_updated_on>
+        <template><![CDATA[<div class="sp-layout">
+
+    <!-- ================= SIDEBAR ================= -->
+    <div class="sidebar-area">
+        <sp-widget widget="data.side"></sp-widget>
+    </div>
+
+    <!-- ================= HISTORY PAGE ================= -->
+    <div class="dmm-history">
+
+
+        <!-- ================= HEADER ================= -->
+        <div class="dmm-header-row">
+            <div>
+                <h2>Migration History</h2>
+                <p>View and manage past migration runs</p>
+            </div>
+
+            <button class="btn-export" ng-click="c.exportCSV()">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 15V3"/>
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <path d="m7 10 5 5 5-5"/>
+    </svg>
+    Export CSV
+</button>
+        </div>
+
+        <!-- ================= STATS ================= -->
+        <div class="stats-row">
+
+            <div class="stat-card gradient-blue">
+                <div class="stat-icon one">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-database-icon lucide-database"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></svg>
+                </div>
+                <div class="stat-title">Total Runs</div>
+                <div class="stat-value">{{c.stats.total}}</div>
+                <div class="stat-sub">All migration executions</div>
+            </div>
+
+            <div class="stat-card gradient-green">
+                <div class="stat-icon two">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-check-icon lucide-circle-check"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+                </div>
+                <div class="stat-title">Successful</div>
+                <div class="stat-value">{{c.stats.success}}</div>
+                <div class="stat-sub">Completed successfully</div>
+            </div>
+
+            <div class="stat-card gradient-orange">
+                <div class="stat-icon three">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-alert-icon lucide-circle-alert"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+                </div>
+                <div class="stat-title">Partial</div>
+                <div class="stat-value">{{c.stats.partial}}</div>
+                <div class="stat-sub">Completed with issues</div>
+            </div>
+
+            <div class="stat-card gradient-red">
+                <div class="stat-icon four">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-x-icon lucide-circle-x"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
+                </div>
+                <div class="stat-title">Failed</div>
+                <div class="stat-value">{{c.stats.failed}}</div>
+                <div class="stat-sub">Migration failed</div>
+            </div>
+
+        </div>
+
+        <!-- ================= FILTER ================= -->
+        <div class="filter-bar">
+
+            <input type="text"
+                   class="search-bar"
+                   placeholder="Search by Migration ID or table name..."
+                   ng-model="c.searchText">
+
+            <select ng-model="c.statusFilter">
+                <option value="">All Status</option>
+                <option value="success">Success</option>
+                <option value="partial">Partial</option>
+                <option value="failed">Failed</option>
+            </select>
+
+            <select ng-model="c.timeFilter">
+                <option value="">All Time</option>
+                <option value="today">Today</option>
+                <option value="week">This Week</option>
+                <option value="month">This Month</option>
+            </select>
+
+        </div>
+
+        <!-- ================= TABLE ================= -->
+        <div class="table-card">
+
+            <h4>Migration Runs ({{c.filteredRuns().length}})</h4>
+
+            <table>
+
+                <thead>
+                    <tr>
+                        <th>Migration ID</th>
+                        <th>Tables</th>
+                        <th>Records Fetched</th>
+                        <th>Records Inserted</th>
+                        <th>Records Updated</th>
+                        <th>Status</th>
+                        <th>Duration</th>
+                        <th>Date & Time</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    <!-- MAIN ROW -->
+                    <tr ng-repeat-start="r in c.paginatedRuns()">
+
+                        <td class="link">{{r.run_id}}</td>
+
+                        <td>
+                            <span class="badge"
+                                  ng-repeat="t in r.tables">
+                                {{t}}
+                            </span>
+                        </td>
+                         <td>{{r.fetched}}</td>
+                        <td>{{r.records}}</td>
+                        <td>{{r.updated}}</td>
+                      <!-- STATUS COLUMN -->
+												<td>
+    										<span class="status"
+      ng-class="{
+        'success': r.success_rate == 100,
+        'warning': r.success_rate > 0 && r.success_rate < 100,
+        'danger': r.success_rate == 0
+      }">
+
+  <i class="fa"
+     ng-class="{
+       'fa-check-circle': r.success_rate == 100,
+       'fa-clock-o': r.success_rate > 0 && r.success_rate < 100,
+       'fa-times-circle': r.success_rate == 0
+     }"></i>
+
+  {{ r.success_rate == 100 ? 'Success' : 
+     (r.success_rate == 0 ? 'Failed' : 'Partial') }}
+
+</span>
+</td>
+
+                        <td>{{r.duration}}</td>
+                        <td>{{r.created}}</td>
+
+                        <td class="preview">
+                           <i class="fa"
+   														title="View Details"
+   														ng-class="{
+     													'fa-angle-down': !(c.selectedRun && c.selectedRun.sys_id === r.sys_id),
+     													'fa-angle-up': (c.selectedRun && c.selectedRun.sys_id === r.sys_id)
+  														 }"
+  														 ng-click="c.rerun(r)">
+														</i>
+                        </td>
+
+                    </tr>
+
+                    <!-- EXPANDABLE DETAILS ROW -->
+                    <tr ng-repeat-end
+                        ng-if="c.selectedRun && c.selectedRun.sys_id === r.sys_id">
+
+                        <td colspan="9">
+
+                            <div class="details-section">
+
+                                <div class="details-grid">
+
+                                    <!-- CART -->
+                                    <!-- CONTENTS -->
+<div class="detail-card">
+    <h4>
+        <i class="fa fa-database"></i> Contents
+    </h4>
+
+    <div class="record-box"
+         ng-repeat="t in c.selectedRun.tables">
+        {{t}}
+    </div>
+</div>
+
+<!-- MIGRATION -->
+<div class="detail-card">
+    <h4>
+        <i class="fa fa-exchange"></i> Migration Details
+    </h4>
+
+    <p>Status</p>
+    <span class="status"
+          ng-class="{
+            'success': c.selectedRun.status=='success',
+            'warning': c.selectedRun.status=='partial',
+            'danger': c.selectedRun.status=='failed'
+          }">
+        {{c.selectedRun.status | uppercase}}
+    </span>
+
+    <p>Duration</p>
+    <strong>{{c.selectedRun.duration}}</strong>
+
+    <p>Success Rate</p>
+    <strong>
+        {{ c.selectedRun.success_rate || 0 }}%
+    </strong>
+</div>
+
+<!-- EXECUTION -->
+<div class="detail-card">
+    <h4>
+        <i class="fa fa-user"></i> Execution Info
+    </h4>
+
+    <p>User</p>
+    <strong>{{c.selectedRun.user}}</strong>
+
+    <p>Instance</p>
+    <strong>{{c.selectedRun.instance}}</strong>
+
+    <p>Timestamp</p>
+    <strong>{{c.selectedRun.created}}</strong>
+</div>
+                                </div>
+
+                            </div>
+
+                        </td>
+
+                    </tr>
+                    <!-- EMPTY -->
+                    <tr ng-if="!c.filteredRuns().length">
+                        <td colspan="7" style="text-align:center;padding:30px;">
+                            No migration history found
+                        </td>
+                    </tr>
+
+                </tbody>
+
+            </table>
+  <div class="pagination">
+
+    <button ng-click="c.prevPage()" ng-disabled="c.currentPage === 1">
+        ← Prev
+    </button>
+
+    <span>
+        Page {{c.currentPage}} of {{c.totalPages()}}
+    </span>
+
+    <button ng-click="c.nextPage()" ng-disabled="c.currentPage === c.totalPages()">
+        Next →
+    </button>
+
+</div>
+
+        </div>
+
+    </div>
+</div>]]></template>
+    </sp_widget>
+</record_update>

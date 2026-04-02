@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_widget">
+    <sp_widget action="INSERT_OR_UPDATE">
+        <category>custom</category>
+        <client_script><![CDATA[api.controller = function() {
+  var c = this;
+
+  // UI State
+  c.progress = 30; // Matches Image (3)
+  c.done = 0;
+  c.running = true; 
+  
+  c.settings = {
+    dryRun: false,
+    preserveSysId: true,
+    migrateAttachments: true,
+    batchSize: 100
+  };
+
+  c.logs = [
+    {time: '15:18:40', level: 'INFO', text: 'Initializing migration process...'},
+    {time: '15:18:40', level: 'INFO', text: 'Cart contains 2 record(s) from 2 table(s)'},
+    {time: '15:18:41', level: 'INFO', text: 'Processing...'}
+  ];
+};]]></client_script>
+        <controller_as>c</controller_as>
+        <css>.migration-container {
+  padding: 24px;
+  background-color: #f6f7f7;
+  color: #181c21;
+}
+
+.page-title { font-size: 24px; font-weight: 700; margin: 0; }
+.page-subtitle { color: #63666a; font-size: 14px; margin-top: 4px; margin-bottom: 24px; }
+
+/* Panels */
+.card-panel {
+  background: #ffffff;
+  border: 1px solid #d1d4d5;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.panel-label {
+  padding: 12px 16px;
+  font-weight: 600;
+  border-bottom: 1px solid #f0f1f2;
+  font-size: 14px;
+}
+
+.panel-body { padding: 16px; }
+
+/* Record Cards */
+.record-item-card {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border: 1px solid #e6e8e9;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  background: #ffffff;
+}
+
+.item-icon { color: #81878e; font-size: 20px; margin-right: 16px; }
+.item-title { font-weight: 600; font-size: 14px; }
+.item-desc { color: #63666a; font-size: 12px; }
+
+/* Progress Bar */
+.sn-progress-bg {
+  background: #e6e8e9;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.sn-progress-fill {
+  background: #181c21;
+  height: 100%;
+  transition: width 0.5s ease;
+}
+.button-footer{
+	padding-bottom: 10px;
+  
+}
+.status-counters { font-size: 12px; font-weight: 600; }
+.success-text { color: #2e8540; margin-right: 15px; }
+.failed-text { color: #b7211e; margin-right: 15px; }
+.pending-text { color: #81878e; }
+
+/* Switches (Standard SN Look) */
+.switch { position: relative; display: inline-block; width: 34px; height: 18px; margin-right: 8px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider {
+  position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #bdc0c4; transition: .4s; border-radius: 34px;
+}
+.slider:before {
+  position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px;
+  background-color: white; transition: .4s; border-radius: 50%;
+}
+input:checked + .slider { background-color: #181c21; }
+input:checked + .slider:before { transform: translateX(16px); }
+
+.settings-row { display: flex; gap: 40px; margin-bottom: 20px; }
+.toggle-item { display: flex; align-items: center; font-size: 13px; }
+
+/* Terminal */
+.terminal-window {
+  background: #0d1117;
+  color: #e6edf3;
+  font-family: 'Monaco', monospace;
+  font-size: 12px;
+  padding: 16px;
+  border-radius: 4px;
+  min-height: 150px;
+}
+.log-line { margin-bottom: 4px; opacity: 0.9; }
+.ts { color: #8b949e; }
+.lvl { color: #58a6ff; font-weight: bold; }
+
+/* Buttons */
+.btn-start {
+  background: #2971d6; color: white; border: none; padding: 8px 16px;
+  border-radius: 4px; font-weight: 600;
+}
+.btn-pause { border: 1px solid #d1d4d5; background: white; padding: 8px 16px; border-radius: 4px; margin-right: 8px;}
+.btn-cancel { border: 1px solid #ef4444; background: white; color: #ef4444; padding: 8px 16px; border-radius: 4px;}
+.btn-download { border: 1px solid #d1d4d5; background: white; padding: 4px 10px; border-radius: 4px; font-size: 12px; }
+
+.flex-between { display: flex; justify-content: space-between; align-items: center; }
+.margin-bottom-10 { margin-bottom: 10px; }</css>
+        <data_table>sp_instance</data_table>
+        <demo_data/>
+        <description/>
+        <docs/>
+        <field_list/>
+        <has_preview>true</has_preview>
+        <id/>
+        <internal>false</internal>
+        <link><![CDATA[function link(scope, element, attrs, controller) {
+  
+}]]></link>
+        <name>Run Migration</name>
+        <option_schema/>
+        <public>false</public>
+        <roles/>
+        <script><![CDATA[(function() {
+  data.records = [
+    {type: 'Incident', number: 'INC0012345', short_description: 'Network connectivity issues'},
+    {type: 'Problem', number: 'PRB0001234', short_description: 'Database performance degradation'}
+  ];
+})();]]></script>
+        <servicenow>false</servicenow>
+        <sys_class_name>sp_widget</sys_class_name>
+        <sys_created_by>irfan.wani</sys_created_by>
+        <sys_created_on>2026-02-27 09:54:51</sys_created_on>
+        <sys_id>2979a33d3b9f7a90deb2090eb3e45ae2</sys_id>
+        <sys_mod_count>16</sys_mod_count>
+        <sys_name>Run Migration</sys_name>
+        <sys_package display_value="Data Migration" source="x_sysus_data_mig_0">9977a0f8eb03f610084cfd50dad0cd43</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Data Migration">9977a0f8eb03f610084cfd50dad0cd43</sys_scope>
+        <sys_update_name>sp_widget_2979a33d3b9f7a90deb2090eb3e45ae2</sys_update_name>
+        <sys_updated_by>irfan.wani</sys_updated_by>
+        <sys_updated_on>2026-02-27 10:28:21</sys_updated_on>
+        <template><![CDATA[<div class="migration-container">
+  <h2 class="page-title">Migration Run</h2>
+  <p class="page-subtitle">Monitor real-time migration progress</p>
+
+  <div class="card-panel">
+    <div class="panel-label">Cart Contents Summary</div>
+    <div class="panel-body">
+      <p class="text-muted no-margin">Total: {{data.records.length}} records from 2 tables</p>
+    </div>
+  </div>
+
+  <div class="card-panel">
+    <div class="panel-label">Migration Progress</div>
+    <div class="panel-body">
+      <div class="flex-between margin-bottom-10">
+        <span class="text-bold">Overall Progress</span>
+        <span class="text-muted">{{c.progress}}% ({{c.done}}/{{data.records.length}} records)</span>
+      </div>
+      <div class="sn-progress-bg">
+        <div class="sn-progress-fill" ng-style="{'width': c.progress + '%'}"></div>
+      </div>
+      <div class="status-counters">
+        <span class="success-text"><i class="fa fa-check"></i> 0 success</span>
+        <span class="failed-text"><i class="fa fa-times"></i> 0 failed</span>
+        <span class="pending-text"><i class="fa fa-hourglass-start"></i> 2 pending</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-panel">
+    <div class="panel-label">Record-Level Status</div>
+    <div class="panel-body">
+      <div ng-repeat="record in data.records" class="record-item-card">
+        <div class="item-icon">
+          <i class="fa fa-clock-o"></i>
+        </div>
+        <div class="item-details">
+          <div class="item-title">{{record.type}}: {{record.number}}</div>
+          <div class="item-desc">{{record.short_description}}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="button-footer">
+    <button class="btn-start" ng-click="c.startMigration()">
+      <i class="fa fa-play-circle-o"></i> Start Migration
+    </button>
+  </div>
+
+  <div class="card-panel log-panel">
+    <div class="flex-between margin-bottom-15">
+      <span class="text-bold">Live Migration Log</span>
+      <button class="btn-download"><i class="fa fa-download"></i> Download Log</button>
+    </div>
+    <div class="terminal-window">
+      <div class="log-line" ng-repeat="log in c.logs track by $index">
+        <span class="ts">[{{log.time}}]</span> <span class="lvl">{{log.level}}:</span> {{log.text}}
+      </div>
+    </div>
+  </div>
+</div>]]></template>
+    </sp_widget>
+</record_update>

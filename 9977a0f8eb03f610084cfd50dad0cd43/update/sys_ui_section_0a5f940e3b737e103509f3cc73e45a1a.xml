@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update>
+    <sys_ui_section caption="Advanced MID Server Configuration" section_id="0a5f940e3b737e103509f3cc73e45a1a" sys_domain="global" table="x_sysus_data_mig_0_x_sysus_data_mig_0_notifications" version="3" view="">
+        <sys_ui_annotation action="INSERT_OR_UPDATE">
+            <is_plain_text>false</is_plain_text>
+            <name/>
+            <sys_created_by>bareen.makhdoomi</sys_created_by>
+            <sys_created_on>2026-03-24 10:21:24</sys_created_on>
+            <sys_id>465f940e3b737e103509f3cc73e45a20</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_updated_by>bareen.makhdoomi</sys_updated_by>
+            <sys_updated_on>2026-03-24 10:21:24</sys_updated_on>
+            <text>MID server selection advanced help</text>
+            <type display_value="Info Box Blue">753f88a80f930000b12e6903cfe01206</type>
+        </sys_ui_annotation>
+        <sys_ui_annotation action="INSERT_OR_UPDATE">
+            <is_plain_text>false</is_plain_text>
+            <name/>
+            <sys_created_by>bareen.makhdoomi</sys_created_by>
+            <sys_created_on>2026-03-24 10:21:24</sys_created_on>
+            <sys_id>4a5f940e3b737e103509f3cc73e45a1c</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_updated_by>bareen.makhdoomi</sys_updated_by>
+            <sys_updated_on>2026-03-24 10:21:24</sys_updated_on>
+            <text>MID server application help</text>
+            <type display_value="Info Box Blue">753f88a80f930000b12e6903cfe01206</type>
+        </sys_ui_annotation>
+        <sys_ui_element action="INSERT_OR_UPDATE">
+            <element>mid_selection</element>
+            <position>0</position>
+            <sys_created_by>bareen.makhdoomi</sys_created_by>
+            <sys_created_on>2026-03-24 10:21:24</sys_created_on>
+            <sys_id>8e5f940e3b737e103509f3cc73e45a23</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_ui_formatter/>
+            <sys_ui_section caption="Advanced MID Server Configuration" display_value="Advanced MID Server Configuration" name="x_sysus_data_mig_0_x_sysus_data_mig_0_notifications" sys_domain="global" view="Default view">0a5f940e3b737e103509f3cc73e45a1a</sys_ui_section>
+            <sys_updated_by>bareen.makhdoomi</sys_updated_by>
+            <sys_updated_on>2026-03-24 10:21:24</sys_updated_on>
+            <sys_user/>
+            <type/>
+        </sys_ui_element>
+        <sys_ui_element action="INSERT_OR_UPDATE">
+            <element>465f940e3b737e103509f3cc73e45a20</element>
+            <position>1</position>
+            <sys_created_by>bareen.makhdoomi</sys_created_by>
+            <sys_created_on>2026-03-24 10:21:24</sys_created_on>
+            <sys_id>065f940e3b737e103509f3cc73e45a21</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_ui_formatter/>
+            <sys_ui_section caption="Advanced MID Server Configuration" display_value="Advanced MID Server Configuration" name="x_sysus_data_mig_0_x_sysus_data_mig_0_notifications" sys_domain="global" view="Default view">0a5f940e3b737e103509f3cc73e45a1a</sys_ui_section>
+            <sys_updated_by>bareen.makhdoomi</sys_updated_by>
+            <sys_updated_on>2026-03-24 10:21:24</sys_updated_on>
+            <sys_user/>
+            <type>annotation</type>
+        </sys_ui_element>
+        <sys_ui_element action="INSERT_OR_UPDATE">
+            <element>capabilities</element>
+            <position>2</position>
+            <sys_created_by>bareen.makhdoomi</sys_created_by>
+            <sys_created_on>2026-03-24 10:21:24</sys_created_on>
+            <sys_id>0e5f940e3b737e103509f3cc73e45a24</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_ui_formatter/>
+            <sys_ui_section caption="Advanced MID Server Configuration" display_value="Advanced MID Server Configuration" name="x_sysus_data_mig_0_x_sysus_data_mig_0_notifications" sys_domain="global" view="Default view">0a5f940e3b737e103509f3cc73e45a1a</sys_ui_section>
+            <sys_updated_by>bareen.makhdoomi</sys_updated_by>
+            <sys_updated_on>2026-03-24 10:21:24</sys_updated_on>
+            <sys_user/>
+            <type/>
+        </sys_ui_element>
+        <sys_ui_element action="INSERT_OR_UPDATE">
+            <element>4a5f940e3b737e103509f3cc73e45a1c</element>
+            <position>3</position>
+            <sys_created_by>bareen.makhdoomi</sys_created_by>
+            <sys_created_on>2026-03-24 10:21:24</sys_created_on>
+            <sys_id>c65f940e3b737e103509f3cc73e45a1e</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_ui_formatter/>
+            <sys_ui_section caption="Advanced MID Server Configuration" display_value="Advanced MID Server Configuration" name="x_sysus_data_mig_0_x_sysus_data_mig_0_notifications" sys_domain="global" view="Default view">0a5f940e3b737e103509f3cc73e45a1a</sys_ui_section>
+            <sys_updated_by>bareen.makhdoomi</sys_updated_by>
+            <sys_updated_on>2026-03-24 10:21:24</sys_updated_on>
+            <sys_user/>
+            <type>annotation</type>
+        </sys_ui_element>
+        <sys_ui_element action="INSERT_OR_UPDATE">
+            <element>application</element>
+            <position>4</position>
+            <sys_created_by>bareen.makhdoomi</sys_created_by>
+            <sys_created_on>2026-03-24 10:21:24</sys_created_on>
+            <sys_id>825f940e3b737e103509f3cc73e45a22</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_ui_formatter/>
+            <sys_ui_section caption="Advanced MID Server Configuration" display_value="Advanced MID Server Configuration" name="x_sysus_data_mig_0_x_sysus_data_mig_0_notifications" sys_domain="global" view="Default view">0a5f940e3b737e103509f3cc73e45a1a</sys_ui_section>
+            <sys_updated_by>bareen.makhdoomi</sys_updated_by>
+            <sys_updated_on>2026-03-24 10:21:24</sys_updated_on>
+            <sys_user/>
+            <type/>
+        </sys_ui_element>
+        <sys_ui_element action="INSERT_OR_UPDATE">
+            <element>mid_server</element>
+            <position>5</position>
+            <sys_created_by>bareen.makhdoomi</sys_created_by>
+            <sys_created_on>2026-03-24 10:21:24</sys_created_on>
+            <sys_id>465f940e3b737e103509f3cc73e45a1f</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_ui_formatter/>
+            <sys_ui_section caption="Advanced MID Server Configuration" display_value="Advanced MID Server Configuration" name="x_sysus_data_mig_0_x_sysus_data_mig_0_notifications" sys_domain="global" view="Default view">0a5f940e3b737e103509f3cc73e45a1a</sys_ui_section>
+            <sys_updated_by>bareen.makhdoomi</sys_updated_by>
+            <sys_updated_on>2026-03-24 10:21:24</sys_updated_on>
+            <sys_user/>
+            <type/>
+        </sys_ui_element>
+        <sys_ui_element action="INSERT_OR_UPDATE">
+            <element>mid_cluster</element>
+            <position>6</position>
+            <sys_created_by>bareen.makhdoomi</sys_created_by>
+            <sys_created_on>2026-03-24 10:21:24</sys_created_on>
+            <sys_id>025f940e3b737e103509f3cc73e45a23</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_ui_formatter/>
+            <sys_ui_section caption="Advanced MID Server Configuration" display_value="Advanced MID Server Configuration" name="x_sysus_data_mig_0_x_sysus_data_mig_0_notifications" sys_domain="global" view="Default view">0a5f940e3b737e103509f3cc73e45a1a</sys_ui_section>
+            <sys_updated_by>bareen.makhdoomi</sys_updated_by>
+            <sys_updated_on>2026-03-24 10:21:24</sys_updated_on>
+            <sys_user/>
+            <type/>
+        </sys_ui_element>
+        <sys_ui_section action="INSERT_OR_UPDATE">
+            <caption>Advanced MID Server Configuration</caption>
+            <header>false</header>
+            <name>x_sysus_data_mig_0_x_sysus_data_mig_0_notifications</name>
+            <roles/>
+            <sys_class_name>sys_ui_section</sys_class_name>
+            <sys_created_by>bareen.makhdoomi</sys_created_by>
+            <sys_created_on>2026-03-24 10:21:24</sys_created_on>
+            <sys_domain>global</sys_domain>
+            <sys_domain_path>/</sys_domain_path>
+            <sys_id>0a5f940e3b737e103509f3cc73e45a1a</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_name>x_sysus_data_mig_0_x_sysus_data_mig_0_notifications</sys_name>
+            <sys_overrides/>
+            <sys_package display_value="Data Migration" source="x_sysus_data_mig_0">9977a0f8eb03f610084cfd50dad0cd43</sys_package>
+            <sys_policy/>
+            <sys_scope display_value="Data Migration">9977a0f8eb03f610084cfd50dad0cd43</sys_scope>
+            <sys_update_name>sys_ui_section_0a5f940e3b737e103509f3cc73e45a1a</sys_update_name>
+            <sys_updated_by>bareen.makhdoomi</sys_updated_by>
+            <sys_updated_on>2026-03-24 10:21:24</sys_updated_on>
+            <sys_user/>
+            <title>false</title>
+            <view display_value="Default view" name="NULL">Default view</view>
+            <view_name/>
+        </sys_ui_section>
+    </sys_ui_section>
+</record_update>

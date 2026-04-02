@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_widget">
+    <sp_widget action="INSERT_OR_UPDATE">
+        <category>custom</category>
+        <client_script><![CDATA[api.controller=function() {
+  /* widget controller */
+  var c = this;
+};]]></client_script>
+        <controller_as>c</controller_as>
+        <css>html, body {
+  margin: 0;
+  height: 100%;
+}
+
+/* Wrapper */
+.dmm-app {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* Sidebar */
+.dmm-sidebar {
+  width: 240px;
+  background: #0f172a;
+  color: white;
+  padding: 20px;
+}
+
+/* Sidebar links */
+.dmm-sidebar a {
+  display: block;
+  color: #94a3b8;
+  padding: 10px;
+  text-decoration: none;
+}
+
+.dmm-sidebar a:hover {
+  background: #1e293b;
+  color: white;
+}
+
+/* Main */
+.dmm-main {
+  flex: 1;
+  background: #f5f7fb;
+}
+
+/* Content */
+.dmm-body {
+  padding: 30px;
+}
+</css>
+        <data_table>sp_instance</data_table>
+        <demo_data/>
+        <description/>
+        <docs/>
+        <field_list/>
+        <has_preview>false</has_preview>
+        <id/>
+        <internal>false</internal>
+        <link><![CDATA[function link(scope, element, attrs, controller) {
+  
+}]]></link>
+        <name>DMM Layout</name>
+        <option_schema/>
+        <public>false</public>
+        <roles/>
+        <script><![CDATA[(function() {
+  /* populate the 'data' object */
+  /* e.g., data.table = $sp.getValue('table'); */
+
+})();]]></script>
+        <servicenow>false</servicenow>
+        <sys_class_name>sp_widget</sys_class_name>
+        <sys_created_by>bareen.makhdoomi</sys_created_by>
+        <sys_created_on>2026-02-19 09:52:08</sys_created_on>
+        <sys_id>212c529f3b47f650deb2090eb3e45af9</sys_id>
+        <sys_mod_count>2</sys_mod_count>
+        <sys_name>DMM Layout</sys_name>
+        <sys_package display_value="Data Migration" source="x_sysus_data_mig_0">9977a0f8eb03f610084cfd50dad0cd43</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Data Migration">9977a0f8eb03f610084cfd50dad0cd43</sys_scope>
+        <sys_update_name>sp_widget_212c529f3b47f650deb2090eb3e45af9</sys_update_name>
+        <sys_updated_by>bareen.makhdoomi</sys_updated_by>
+        <sys_updated_on>2026-02-19 10:00:16</sys_updated_on>
+        <template><![CDATA[<div class="dmm-app">
+
+  <aside class="dmm-sidebar">
+    <sp-widget widget="dmm_sidebar"></sp-widget>
+  </aside>
+
+  <div class="dmm-main">
+
+    <header class="dmm-header">
+      <sp-navbar></sp-navbar>
+    </header>
+
+    <main class="dmm-body">
+      <sp-widget></sp-widget>
+    </main>
+
+  </div>
+
+</div>
+]]></template>
+    </sp_widget>
+</record_update>

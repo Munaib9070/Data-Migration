@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update sys_domain="global" table="sys_app_module">
+    <sys_app_module action="DELETE">
+        <active>true</active>
+        <application display_value="Data Migration">11852508ebd37610084cfd50dad0cd89</application>
+        <assessment/>
+        <device_type/>
+        <filter/>
+        <hint>This link will nivigate you to data migration portal</hint>
+        <homepage/>
+        <image/>
+        <link_type>DIRECT</link_type>
+        <map_page/>
+        <mobile_title>Data Migration</mobile_title>
+        <mobile_view_name>Mobile</mobile_view_name>
+        <name/>
+        <order>100</order>
+        <override_menu_roles>false</override_menu_roles>
+        <query>/datamigration</query>
+        <report/>
+        <require_confirmation>true</require_confirmation>
+        <roles/>
+        <sys_class_name>sys_app_module</sys_class_name>
+        <sys_created_by>irfan.wani</sys_created_by>
+        <sys_created_on>2026-02-21 13:51:47</sys_created_on>
+        <sys_domain>global</sys_domain>
+        <sys_domain_path>/</sys_domain_path>
+        <sys_id>dac5e908ebd37610084cfd50dad0cdad</sys_id>
+        <sys_mod_count>1</sys_mod_count>
+        <sys_name>Data Migration Portal</sys_name>
+        <sys_overrides/>
+        <sys_package display_value="Data Migration" source="x_sysus_data_mig_0">9977a0f8eb03f610084cfd50dad0cd43</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Data Migration">9977a0f8eb03f610084cfd50dad0cd43</sys_scope>
+        <sys_update_name>sys_app_module_dac5e908ebd37610084cfd50dad0cdad</sys_update_name>
+        <sys_updated_by>irfan.wani</sys_updated_by>
+        <sys_updated_on>2026-02-21 13:53:18</sys_updated_on>
+        <timeline_page/>
+        <title>Data Migration Portal</title>
+        <uncancelable>false</uncancelable>
+        <view_name/>
+        <window_name/>
+    </sys_app_module>
+    <sys_update_version action="INSERT_OR_UPDATE">
+        <action>DELETE</action>
+        <application display_value="Data Migration">9977a0f8eb03f610084cfd50dad0cd43</application>
+        <file_path/>
+        <instance_id>3c94a895dbee3f0452dd2f17d496195e</instance_id>
+        <instance_name>sysusademo5</instance_name>
+        <name>sys_app_module_dac5e908ebd37610084cfd50dad0cdad</name>
+        <payload><![CDATA[<?xml version="1.0" encoding="UTF-8"?><record_update sys_domain="global" table="sys_app_module"><sys_app_module action="INSERT_OR_UPDATE"><active>true</active><application display_value="Data Migration">11852508ebd37610084cfd50dad0cd89</application><assessment/><device_type/><filter/><hint>This link will nivigate you to data migration portal</hint><homepage/><image/><link_type>DIRECT</link_type><map_page/><mobile_title>Data Migration</mobile_title><mobile_view_name>Mobile</mobile_view_name><name/><order>100</order><override_menu_roles>false</override_menu_roles><query>/datamigration</query><report/><require_confirmation>true</require_confirmation><roles/><sys_class_name>sys_app_module</sys_class_name><sys_created_by>irfan.wani</sys_created_by><sys_created_on>2026-02-21 13:51:47</sys_created_on><sys_domain>global</sys_domain><sys_domain_path>/</sys_domain_path><sys_id>dac5e908ebd37610084cfd50dad0cdad</sys_id><sys_mod_count>1</sys_mod_count><sys_name>Data Migration Portal</sys_name><sys_overrides/><sys_package display_value="Data Migration" source="x_sysus_data_mig_0">9977a0f8eb03f610084cfd50dad0cd43</sys_package><sys_policy/><sys_scope display_value="Data Migration">9977a0f8eb03f610084cfd50dad0cd43</sys_scope><sys_update_name>sys_app_module_dac5e908ebd37610084cfd50dad0cdad</sys_update_name><sys_updated_by>irfan.wani</sys_updated_by><sys_updated_on>2026-02-21 13:53:18</sys_updated_on><timeline_page/><title>Data Migration Portal</title><uncancelable>false</uncancelable><view_name/><window_name/></sys_app_module></record_update>]]></payload>
+        <payload_hash>-224902532</payload_hash>
+        <record_name>Data Migration Portal</record_name>
+        <reverted_from/>
+        <source>00875a173b47f650deb2090eb3e45a5d</source>
+        <source_table>sys_update_set</source_table>
+        <state>previous</state>
+        <sys_created_by>irfan.wani</sys_created_by>
+        <sys_created_on>2026-02-21 13:53:18</sys_created_on>
+        <sys_id>3386ed48ebd37610084cfd50dad0cd63</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_recorded_at>19c8079e5dd0000001</sys_recorded_at>
+        <sys_updated_by>irfan.wani</sys_updated_by>
+        <sys_updated_on>2026-02-21 13:53:18</sys_updated_on>
+        <type>Module</type>
+        <update_guid>7f86ed48edd376107a7542892b509e61</update_guid>
+        <update_guid_history>7f86ed48edd376107a7542892b509e61:-224902532,e5366548f7d37610c7f383fdaa0b4714:-1535809963</update_guid_history>
+    </sys_update_version>
+    <sys_metadata_delete action="INSERT_OR_UPDATE">
+        <sys_audit_delete display_value="Data Migration Portal">c5b6e188ebd37610084cfd50dad0cd68</sys_audit_delete>
+        <sys_class_name>sys_metadata_delete</sys_class_name>
+        <sys_created_by>irfan.wani</sys_created_by>
+        <sys_created_on>2026-02-21 13:53:56</sys_created_on>
+        <sys_db_object display_value="" name="sys_app_module">sys_app_module</sys_db_object>
+        <sys_id>0f617f49733441d480e76614e0ec1310</sys_id>
+        <sys_metadata>dac5e908ebd37610084cfd50dad0cdad</sys_metadata>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>Data Migration Portal</sys_name>
+        <sys_package display_value="Data Migration" source="x_sysus_data_mig_0">9977a0f8eb03f610084cfd50dad0cd43</sys_package>
+        <sys_parent/>
+        <sys_policy/>
+        <sys_scope display_value="Data Migration">9977a0f8eb03f610084cfd50dad0cd43</sys_scope>
+        <sys_scope_delete display_value="">5e2f1aae80864cfaa58b581383745104</sys_scope_delete>
+        <sys_update_name>sys_app_module_dac5e908ebd37610084cfd50dad0cdad</sys_update_name>
+        <sys_update_version display_value="sys_app_module_dac5e908ebd37610084cfd50dad0cdad">3386ed48ebd37610084cfd50dad0cd63</sys_update_version>
+        <sys_updated_by>irfan.wani</sys_updated_by>
+        <sys_updated_on>2026-02-21 13:53:56</sys_updated_on>
+    </sys_metadata_delete>
+</record_update>

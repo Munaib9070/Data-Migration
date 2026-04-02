@@ -4,13 +4,153 @@
             <element>number</element>
             <position>0</position>
             <sys_created_by>munaib.ashraf</sys_created_by>
-            <sys_created_on>2026-02-11 06:58:35</sys_created_on>
-            <sys_id>abb7e8f8eb03f610084cfd50dad0cd8b</sys_id>
+            <sys_created_on>2026-03-29 12:27:20</sys_created_on>
+            <sys_id>371ca2e33bbfb650920bd84a85e45a2b</sys_id>
             <sys_mod_count>0</sys_mod_count>
             <sys_ui_formatter/>
             <sys_ui_section caption="NULL" display_value="" name="x_sysus_data_mig_0_migration_details" sys_domain="global" view="Default view">ebb7e8f8eb03f610084cfd50dad0cd84</sys_ui_section>
             <sys_updated_by>munaib.ashraf</sys_updated_by>
-            <sys_updated_on>2026-02-11 06:58:35</sys_updated_on>
+            <sys_updated_on>2026-03-29 12:27:20</sys_updated_on>
+            <sys_user/>
+            <type/>
+        </sys_ui_element>
+        <sys_ui_element action="INSERT_OR_UPDATE">
+            <element>instance_url</element>
+            <position>1</position>
+            <sys_created_by>munaib.ashraf</sys_created_by>
+            <sys_created_on>2026-03-29 12:27:20</sys_created_on>
+            <sys_id>ff1ca2e33bbfb650920bd84a85e45a2c</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_ui_formatter/>
+            <sys_ui_section caption="NULL" display_value="" name="x_sysus_data_mig_0_migration_details" sys_domain="global" view="Default view">ebb7e8f8eb03f610084cfd50dad0cd84</sys_ui_section>
+            <sys_updated_by>munaib.ashraf</sys_updated_by>
+            <sys_updated_on>2026-03-29 12:27:20</sys_updated_on>
+            <sys_user/>
+            <type/>
+        </sys_ui_element>
+        <sys_ui_element action="INSERT_OR_UPDATE">
+            <element>table</element>
+            <position>2</position>
+            <sys_created_by>munaib.ashraf</sys_created_by>
+            <sys_created_on>2026-03-29 12:27:20</sys_created_on>
+            <sys_id>7f1ca2e33bbfb650920bd84a85e45a2d</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_ui_formatter/>
+            <sys_ui_section caption="NULL" display_value="" name="x_sysus_data_mig_0_migration_details" sys_domain="global" view="Default view">ebb7e8f8eb03f610084cfd50dad0cd84</sys_ui_section>
+            <sys_updated_by>munaib.ashraf</sys_updated_by>
+            <sys_updated_on>2026-03-29 12:27:20</sys_updated_on>
+            <sys_user/>
+            <type/>
+        </sys_ui_element>
+        <sys_ui_element action="INSERT_OR_UPDATE">
+            <element>.split</element>
+            <position>3</position>
+            <sys_created_by>munaib.ashraf</sys_created_by>
+            <sys_created_on>2026-03-29 12:27:20</sys_created_on>
+            <sys_id>fb1ca2e33bbfb650920bd84a85e45a2e</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_ui_formatter/>
+            <sys_ui_section caption="NULL" display_value="" name="x_sysus_data_mig_0_migration_details" sys_domain="global" view="Default view">ebb7e8f8eb03f610084cfd50dad0cd84</sys_ui_section>
+            <sys_updated_by>munaib.ashraf</sys_updated_by>
+            <sys_updated_on>2026-03-29 12:27:20</sys_updated_on>
+            <sys_user/>
+            <type>.split</type>
+        </sys_ui_element>
+        <sys_ui_element action="INSERT_OR_UPDATE">
+            <element>records_fetched</element>
+            <position>4</position>
+            <sys_created_by>munaib.ashraf</sys_created_by>
+            <sys_created_on>2026-03-29 12:27:20</sys_created_on>
+            <sys_id>7b1ca2e33bbfb650920bd84a85e45a2f</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_ui_formatter/>
+            <sys_ui_section caption="NULL" display_value="" name="x_sysus_data_mig_0_migration_details" sys_domain="global" view="Default view">ebb7e8f8eb03f610084cfd50dad0cd84</sys_ui_section>
+            <sys_updated_by>munaib.ashraf</sys_updated_by>
+            <sys_updated_on>2026-03-29 12:27:20</sys_updated_on>
+            <sys_user/>
+            <type/>
+        </sys_ui_element>
+        <sys_ui_element action="INSERT_OR_UPDATE">
+            <element>records_inserted</element>
+            <position>5</position>
+            <sys_created_by>munaib.ashraf</sys_created_by>
+            <sys_created_on>2026-03-29 12:27:20</sys_created_on>
+            <sys_id>f71ca2e33bbfb650920bd84a85e45a30</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_ui_formatter/>
+            <sys_ui_section caption="NULL" display_value="" name="x_sysus_data_mig_0_migration_details" sys_domain="global" view="Default view">ebb7e8f8eb03f610084cfd50dad0cd84</sys_ui_section>
+            <sys_updated_by>munaib.ashraf</sys_updated_by>
+            <sys_updated_on>2026-03-29 12:27:20</sys_updated_on>
+            <sys_user/>
+            <type/>
+        </sys_ui_element>
+        <sys_ui_element action="INSERT_OR_UPDATE">
+            <element>success_rate</element>
+            <position>6</position>
+            <sys_created_by>munaib.ashraf</sys_created_by>
+            <sys_created_on>2026-03-29 12:27:20</sys_created_on>
+            <sys_id>771ca2e33bbfb650920bd84a85e45a31</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_ui_formatter/>
+            <sys_ui_section caption="NULL" display_value="" name="x_sysus_data_mig_0_migration_details" sys_domain="global" view="Default view">ebb7e8f8eb03f610084cfd50dad0cd84</sys_ui_section>
+            <sys_updated_by>munaib.ashraf</sys_updated_by>
+            <sys_updated_on>2026-03-29 12:27:20</sys_updated_on>
+            <sys_user/>
+            <type/>
+        </sys_ui_element>
+        <sys_ui_element action="INSERT_OR_UPDATE">
+            <element>records_updated</element>
+            <position>7</position>
+            <sys_created_by>munaib.ashraf</sys_created_by>
+            <sys_created_on>2026-03-29 12:27:20</sys_created_on>
+            <sys_id>f31ca2e33bbfb650920bd84a85e45a32</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_ui_formatter/>
+            <sys_ui_section caption="NULL" display_value="" name="x_sysus_data_mig_0_migration_details" sys_domain="global" view="Default view">ebb7e8f8eb03f610084cfd50dad0cd84</sys_ui_section>
+            <sys_updated_by>munaib.ashraf</sys_updated_by>
+            <sys_updated_on>2026-03-29 12:27:20</sys_updated_on>
+            <sys_user/>
+            <type/>
+        </sys_ui_element>
+        <sys_ui_element action="INSERT_OR_UPDATE">
+            <element>records_failed</element>
+            <position>8</position>
+            <sys_created_by>munaib.ashraf</sys_created_by>
+            <sys_created_on>2026-03-29 12:27:20</sys_created_on>
+            <sys_id>731ca2e33bbfb650920bd84a85e45a33</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_ui_formatter/>
+            <sys_ui_section caption="NULL" display_value="" name="x_sysus_data_mig_0_migration_details" sys_domain="global" view="Default view">ebb7e8f8eb03f610084cfd50dad0cd84</sys_ui_section>
+            <sys_updated_by>munaib.ashraf</sys_updated_by>
+            <sys_updated_on>2026-03-29 12:27:20</sys_updated_on>
+            <sys_user/>
+            <type/>
+        </sys_ui_element>
+        <sys_ui_element action="INSERT_OR_UPDATE">
+            <element>duration</element>
+            <position>9</position>
+            <sys_created_by>munaib.ashraf</sys_created_by>
+            <sys_created_on>2026-03-29 12:27:20</sys_created_on>
+            <sys_id>ff1ca2e33bbfb650920bd84a85e45a33</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_ui_formatter/>
+            <sys_ui_section caption="NULL" display_value="" name="x_sysus_data_mig_0_migration_details" sys_domain="global" view="Default view">ebb7e8f8eb03f610084cfd50dad0cd84</sys_ui_section>
+            <sys_updated_by>munaib.ashraf</sys_updated_by>
+            <sys_updated_on>2026-03-29 12:27:20</sys_updated_on>
+            <sys_user/>
+            <type/>
+        </sys_ui_element>
+        <sys_ui_element action="INSERT_OR_UPDATE">
+            <element>sys_created_on</element>
+            <position>10</position>
+            <sys_created_by>munaib.ashraf</sys_created_by>
+            <sys_created_on>2026-03-29 12:27:20</sys_created_on>
+            <sys_id>7f1ca2e33bbfb650920bd84a85e45a34</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_ui_formatter/>
+            <sys_ui_section caption="NULL" display_value="" name="x_sysus_data_mig_0_migration_details" sys_domain="global" view="Default view">ebb7e8f8eb03f610084cfd50dad0cd84</sys_ui_section>
+            <sys_updated_by>munaib.ashraf</sys_updated_by>
+            <sys_updated_on>2026-03-29 12:27:20</sys_updated_on>
             <sys_user/>
             <type/>
         </sys_ui_element>

@@ -1,0 +1,699 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_widget">
+    <sp_widget action="INSERT_OR_UPDATE">
+        <category>custom</category>
+        <client_script><![CDATA[api.controller = function($scope, spUtil){
+
+var c = this;
+
+/* LOAD USER FROM SERVER */
+c.user = $scope.data.user;
+
+
+/* ================= SELECT PHOTO ================= */
+
+c.selectPhoto = function(){
+    document.getElementById("photoInput").click();
+};
+
+
+/* ================= UPLOAD PHOTO ================= */
+
+c.uploadPhoto = function(event){
+
+var file = event.target.files[0];
+if(!file) return;
+
+c.uploading = true;
+
+var fd = new FormData();
+
+fd.append("table_name","sys_user");
+fd.append("table_sys_id",g_user.userID);
+fd.append("file",file);
+
+var xhr = new XMLHttpRequest();
+
+xhr.open("POST","/api/now/attachment/file");
+
+xhr.onload = function(){
+
+    var res = JSON.parse(xhr.responseText);
+
+    var attachmentSysId = res.result.sys_id;
+
+    /* CALL SERVER ACTION */
+
+    spUtil.update($scope,{
+        action:"set_photo",
+        attachment_id:attachmentSysId
+    }).then(function(response){
+
+        c.uploading = false;
+
+        /* refresh widget so new photo appears */
+
+        spUtil.refresh($scope);
+
+    });
+
+};
+
+xhr.send(fd);
+
+};
+
+
+/* ================= INITIALS ================= */
+
+c.getInitials = function(name){
+
+if(!name) return "";
+
+var parts = name.split(" ");
+
+var initials = parts.map(function(p){
+return p.charAt(0);
+}).join("");
+
+return initials.substring(0,2).toUpperCase();
+
+};
+
+
+/* ================= FILE INPUT EVENT ================= */
+
+angular.element(document).ready(function(){
+
+var input = document.getElementById("photoInput");
+
+if(input){
+input.addEventListener("change", c.uploadPhoto);
+}
+
+});
+
+};]]></client_script>
+        <controller_as>c</controller_as>
+        <css>.dm-page-layout {
+  display: flex;
+  flex-direction: row; /* FORCE LEFT SIDEBAR */
+  align-items: flex-start;
+}
+
+/* Sidebar width */
+.dm-sidebar-slot {
+  width: 260px;
+  flex-shrink: 0;
+  padding-left:0;
+  padding-top:0;
+}
+.profile-wrapper{
+    background:#f5f7fa;
+    padding:30px;
+    flex: 1;
+    width: 100%;
+}
+.dm-page-layout {
+    display: flex;
+    width: 100%;
+}
+
+.dm-sidebar-slot {
+    width: 260px;
+    flex-shrink: 0;
+}
+
+/* ================= HEADER ================= */
+
+.profile-header{
+    display:flex;
+    align-items:center;
+    gap:20px;
+    background:#fff;
+    padding:25px;
+    border-radius:14px;
+    box-shadow:0 2px 12px rgba(0,0,0,.05);
+    margin-bottom:25px;
+}
+.upload-link{
+    margin-top:4px;
+    font-size:12px;
+    font-weight:400;
+    color:#1f6feb;
+    opacity:.85;
+    cursor:pointer;
+}
+
+.upload-link:hover{
+    opacity:1;
+    text-decoration:underline;
+}.upload-link{
+    margin-top:6px;
+    font-size:12px;      /* smaller text */
+    color:#1F8C95;
+    cursor:pointer;
+    text-decoration:none;
+    line-height:1.2;
+}
+
+.upload-link:hover{
+    text-decoration:underline;
+}
+.avatar{
+    width:72px;
+    height:72px;
+    border-radius:50%;
+    background:#1F8C95;
+    color:#fff;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:26px;
+    cursor:pointer;
+    overflow:hidden;
+    font-weight:600;
+}
+
+.avatar img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+}
+
+.profile-info h2{
+    margin:0;
+    font-weight:600;
+}
+
+.profile-info p{
+    margin:4px 0 0;
+    color:#6b7280;
+}
+
+
+/* ================= CARDS ================= */
+
+.card{
+    background:#fff;
+    border-radius:14px;
+    padding:22px;
+    margin-bottom:25px;
+    box-shadow:0 2px 12px rgba(0,0,0,.05);
+}
+
+.card-title{
+    font-size:16px;
+    font-weight:600;
+    margin-bottom:20px;
+}
+
+
+/* ================= CONTACT ================= */
+
+.contact-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:40px;
+}
+
+.contact-item label{
+    font-weight:600;
+    color:#374151;
+    display:block;
+    margin-bottom:5px;
+}
+
+
+/* ================= PREFERENCES ================= */
+
+.preference-row{
+    display:flex;
+    align-items:center;
+    gap:15px;
+    background:#f3f4f6;
+    padding:16px;
+    border-radius:10px;
+    cursor:pointer;
+    margin-bottom:15px;
+}
+
+.pref-text p{
+    margin:4px 0 0;
+    color:#6b7280;
+    font-size:14px;
+}
+
+
+/* ================= TOGGLE ================= */
+
+.toggle-switch{
+    width:48px;
+    height:24px;
+    background:#d1d5db;
+    border-radius:12px;
+    position:relative;
+    flex-shrink:0;
+}
+
+.toggle-switch.active{
+    background:#10b981;
+}
+
+.toggle-knob{
+    width:20px;
+    height:20px;
+    background:#fff;
+    border-radius:50%;
+    position:absolute;
+    top:2px;
+    left:2px;
+    transition:all .2s ease;
+}
+
+.toggle-switch.active .toggle-knob{
+    transform:translateX(24px);
+}
+
+
+/* ================= BUTTON ================= */
+
+.btn-primary{
+    background:#1F8C95;
+    color:#fff;
+    padding:8px 16px;
+    border-radius:6px;
+    border:none;
+    cursor:pointer;
+    text-decoration:none;
+    font-size:14px;
+}
+
+.btn-primary:hover{
+   
+   background: linear-gradient(to right, #128a9a, #0a5f6d);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+  transition: all 2s ease-out;
+}
+
+
+/* ================= MFA ================= */
+
+.mfa-card{
+    display:flex;
+    align-items:center;
+    gap:20px;
+    background:linear-gradient(135deg,#dbeafe,#bfdbfe);
+    padding:25px;
+    border-radius:14px;
+    margin-bottom:25px;
+}
+
+.mfa-icon{
+    font-size:28px;
+}
+
+.mfa-text p{
+    margin:3px 0 0;
+    color:#1e40af;
+}
+
+
+/* ================= TEAM ================= */
+
+.team-row{
+    padding:12px 0;
+    border-bottom:1px solid #eee;
+    font-size:15px;
+}
+
+.team-row:last-child{
+    border-bottom:none;
+}
+
+/* ===== Preferences ===== */
+
+.preference-box{
+display:flex;
+align-items:center;
+gap:15px;
+background:#f4f6f8;
+padding:18px;
+border-radius:10px;
+cursor:pointer;
+margin-bottom:20px;
+}
+
+.pref-content p{
+margin:3px 0 0;
+color:#6b7280;
+font-size:13px;
+}
+
+/* Toggle */
+
+.toggle-switch{
+width:48px;
+height:24px;
+background:#d1d5db;
+border-radius:20px;
+position:relative;
+transition:.3s;
+}
+
+.toggle-switch.active{
+background:#10b981;
+}
+
+.toggle-knob{
+width:20px;
+height:20px;
+background:white;
+border-radius:50%;
+position:absolute;
+top:2px;
+left:2px;
+transition:.3s;
+}
+
+.toggle-switch.active .toggle-knob{
+transform:translateX(24px);
+}
+
+/* ===== MFA ===== */
+
+.mfa-card{
+display:flex;
+justify-content:space-between;
+align-items:center;
+background:linear-gradient(135deg,#cfe0f7,#9fb6d5);
+padding:22px;
+border-radius:14px;
+margin-top:20px;
+}
+
+.mfa-left{
+display:flex;
+align-items:center;
+gap:15px;
+}
+
+.mfa-icon{
+font-size:22px;
+}
+
+/* ===== Button ===== */
+
+.btn-primary{
+background:#1F8C95;
+color:white;
+border:none;
+padding:10px 18px;
+border-radius:8px;
+cursor:pointer;
+font-weight:500;
+}
+
+.btn-primary:hover{
+ background: linear-gradient(to right, #128a9a, #0a5f6d);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+  transition: all 2s ease-out;
+}
+
+/* ===== Team ===== */
+
+.team-row{
+padding:12px 0;
+font-size:15px;
+}
+/* ================= RESPONSIVE ================= */
+
+@media(max-width:768px){
+
+.contact-grid{
+    grid-template-columns:1fr;
+    gap:20px;
+}
+
+.profile-header{
+    flex-direction:column;
+    text-align:center;
+}
+
+}</css>
+        <data_table>sp_instance</data_table>
+        <demo_data/>
+        <description/>
+        <docs/>
+        <field_list/>
+        <has_preview>true</has_preview>
+        <id/>
+        <internal>false</internal>
+        <link><![CDATA[function link(scope, element, attrs, controller) {
+  
+}]]></link>
+        <name>DMM_Profile</name>
+        <option_schema/>
+        <public>false</public>
+        <roles/>
+        <script><![CDATA[(function() {
+
+var userId = gs.getUserID();
+
+data.user = {};
+data.side = $sp.getWidget('dmm_sidebar');
+
+
+/* ================= SET PHOTO ================= */
+
+if (input && input.action === "set_photo") {
+
+    var attachment = new GlideRecord("sys_attachment");
+
+    if (attachment.get(input.attachment_id)) {
+
+        var usr = new GlideRecord("sys_user");
+
+        if (usr.get(userId)) {
+
+            /* photo field stores the FILE NAME */
+            usr.setValue("photo", attachment.getValue("file_name"));
+
+            usr.update();
+
+        }
+    }
+}
+
+
+/* ================= LOAD USER ================= */
+
+var userGR = new GlideRecord("sys_user");
+
+if (userGR.get(userId)) {
+
+    var photoFile = userGR.getValue("photo");
+
+    data.user = {
+
+        name: userGR.getDisplayValue("name"),
+        title: userGR.getDisplayValue("title"),
+        department: userGR.getDisplayValue("department"),
+        company: userGR.getDisplayValue("company"),
+        location: userGR.getDisplayValue("location"),
+
+        bio:
+            userGR.getDisplayValue("about_me") ||
+            userGR.getDisplayValue("description") ||
+            "",
+
+        email: userGR.getValue("email"),
+        phone: userGR.getValue("phone"),
+        mobile_phone: userGR.getValue("mobile_phone"),
+
+        /* correct way to load profile photo */
+
+        photo: photoFile
+            ? "/sys_user_photo.do?sysparm_user=" + userId
+            : ""
+
+    };
+
+}
+
+})();]]></script>
+        <servicenow>false</servicenow>
+        <sys_class_name>sp_widget</sys_class_name>
+        <sys_created_by>bareen.makhdoomi</sys_created_by>
+        <sys_created_on>2026-02-21 17:49:39</sys_created_on>
+        <sys_id>b49c1ac4eb1b7610084cfd50dad0cd91</sys_id>
+        <sys_mod_count>101</sys_mod_count>
+        <sys_name>DMM_Profile</sys_name>
+        <sys_package display_value="Data Migration" source="x_sysus_data_mig_0">9977a0f8eb03f610084cfd50dad0cd43</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Data Migration">9977a0f8eb03f610084cfd50dad0cd43</sys_scope>
+        <sys_update_name>sp_widget_b49c1ac4eb1b7610084cfd50dad0cd91</sys_update_name>
+        <sys_updated_by>munaib.ashraf</sys_updated_by>
+        <sys_updated_on>2026-03-31 15:52:04</sys_updated_on>
+        <template><![CDATA[<div class="dm-page-layout"> 
+  <!-- LEFT SIDEBAR -->
+  <div class="dm-sidebar-slot">
+    <sp-widget widget='data.side'></sp-widget>
+  </div>
+
+<div class="profile-wrapper">
+
+<!-- ================= HEADER ================= -->
+<div class="profile-header">
+
+    <div class="avatar-section">
+
+        <!-- Avatar -->
+        <div class="avatar">
+
+            <img ng-if="c.user.photo"
+                 ng-src="{{c.user.photo}}">
+
+            <span ng-if="!c.user.photo">
+                {{c.getInitials(c.user.name) || '?'}}
+            </span>
+
+            <div ng-if="c.uploading" class="spinner"></div>
+
+        </div>
+
+        <!-- Upload Link -->
+        <a class="upload-link"
+           ng-click="c.selectPhoto()">
+           Upload profile photo
+        </a>
+
+    </div>
+
+    <!-- User Details -->
+    <div class="header-text">
+
+        <h2 ng-if="c.user.name">
+            {{c.user.name}}
+        </h2>
+
+        <h2 ng-if="!c.user.name">
+            Loading...
+        </h2>
+
+        <p ng-if="c.user.title">
+            {{c.user.title}} • {{c.user.department}}
+        </p>
+
+    </div>
+
+</div>
+
+
+<!-- ================= PERSONAL INFO ================= -->
+<div class="card">
+
+<div class="card-title">Personal Information</div>
+
+<div class="form-grid">
+
+<div class="form-group">
+<label>Company</label>
+<input class="form-control"
+       ng-model="c.user.company"
+       ng-change="c.save('company')">
+</div>
+
+<div class="form-group">
+<label>Title</label>
+<input class="form-control"
+       ng-model="c.user.title"
+       ng-change="c.save('title')">
+</div>
+
+<div class="form-group">
+<label>Department</label>
+<input class="form-control"
+       ng-model="c.user.department"
+       ng-change="c.save('department')">
+</div>
+
+<div class="form-group">
+<label>Location</label>
+<input class="form-control"
+       ng-model="c.user.location"
+       ng-change="c.save('location')">
+</div>
+
+</div>
+
+<div class="form-group bio">
+<label>Bio</label>
+<textarea class="form-control"
+          ng-model="c.user.bio"
+          ng-change="c.save('bio')">
+</textarea>
+</div>
+
+</div>
+
+
+<!-- ================= CONTACT ================= -->
+<div class="card">
+
+<div class="card-title">Contact Information</div>
+
+<div class="contact-grid">
+
+<div>
+<label>Email</label>
+<div>{{c.user.email}}</div>
+</div>
+
+<div>
+<label>Office</label>
+<div>{{c.user.phone || 'N/A'}}</div>
+</div>
+
+<div>
+<label>Mobile</label>
+<div>{{c.user.mobile_phone || 'N/A'}}</div>
+</div>
+
+</div>
+
+</div>
+
+
+
+
+<!-- ================= MFA ================= -->
+<div class="mfa-card">
+
+    <div class="mfa-left">
+
+        <div class="mfa-icon">]]>🔒<![CDATA[</div>
+
+        <div>
+            <strong>Multi-Factor Authentication</strong>
+            <p>Add extra security to your account</p>
+        </div>
+
+    </div>
+
+    <a class="btn-primary"
+       href="/sp_config?id=multi_factor_authentication"
+       target="_self">
+        Enroll Now
+    </a>
+
+</div>
+</div>
+
+
+<!-- ================= HIDDEN FILE INPUT ================= -->
+
+<input type="file"
+       id="photoInput"
+       style="display:none">]]></template>
+    </sp_widget>
+</record_update>

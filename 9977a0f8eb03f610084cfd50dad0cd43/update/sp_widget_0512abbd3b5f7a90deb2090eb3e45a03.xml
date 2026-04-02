@@ -1,0 +1,1649 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_widget">
+    <sp_widget action="INSERT_OR_UPDATE">
+        <category>custom</category>
+        <client_script><![CDATA[api.controller = function($scope, $timeout) {
+  var c = this;
+	c.showModal = false;
+	c.migrationResult = {};
+  c.batchSize = 100;
+  c.showToast = false;
+  c.migrating = false;
+	c.progress = 0;
+	c.current = 0;
+	c.table_count = 0;
+	c.total = 0;
+  c.check = sessionStorage.getItem('currentId');
+	c.logs = [];
+	c.isCompleted = false;
+	c.conn_name = '';
+
+	
+
+  /* =========================
+     NOTIFICATION SYSTEM
+  ========================= */
+
+  c.createNotification = function(notification) {
+    $scope.server.get({
+      action: "createNotification",
+      payload: notification
+    }).then(function() {
+      $scope.$emit("notification.refresh");
+    });
+  };
+	
+	//Migration Modal
+	c.openMigrationModal = function() {
+
+  if (c.getTotalRecords() === 0)
+    return;
+
+  c.showModal = true;      // ]]>🔥<![CDATA[ OPEN MODAL FIRST
+  c.migrationResult = {};
+  c.progress = 0;
+
+  c.startMigration();      // ]]>🔥<![CDATA[ then start migration
+	};
+	
+	//Close Modal
+	c.closeModal = function() {
+  c.showModal = false;
+	};
+
+  /* =========================
+     CART DATA
+  ========================= */
+
+  c.cart = [];
+
+  /* =========================
+     LOAD CART FROM SESSION
+  ========================= */
+
+  c.loadCart = function() {
+
+  var raw = JSON.parse(
+    sessionStorage.getItem("migration_cart") || "[]"
+  );
+	c.selected_recs = raw.length;
+
+  /* =========================
+     DETECT NEWLY ADDED RECORDS
+  ========================= */
+
+  if (c.previousCartLength !== undefined &&
+      raw.length > c.previousCartLength) {
+
+    var addedCount =
+      raw.length - c.previousCartLength;
+
+    c.createNotification({
+      type: "queue_record_added",
+      title: "Records added to migration queue",
+      message: addedCount + " record(s) added to queue.",
+      priority: "info"
+    });
+
+  }
+
+  c.previousCartLength = raw.length;
+
+
+  /* =========================
+     QUEUE LIMIT WARNING
+  ========================= */
+
+  if (raw.length >= 10000) {
+
+    c.createNotification({
+      type: "queue_limit_reached",
+      title: "Migration queue limit reached",
+      message: "Maximum queue size reached (10,000 records).",
+      priority: "warning"
+    });
+
+  }
+
+
+  /* =========================
+     GROUP RECORDS BY TABLE
+  ========================= */
+
+  var grouped = {};
+
+  raw.forEach(function(item) {
+
+    if (!grouped[item.table]) {
+
+      grouped[item.table] = {
+
+        name: item.table,
+        label: item.label,
+        records: []
+
+      };
+
+    }
+
+    grouped[item.table].records.push({
+
+      number: item.number || "",
+      short_description: item.short_description || "",
+      size: item.size || 0,
+      table: item.table || "",
+      sys_id: item.sys_id || ""
+
+    });
+
+  });
+
+
+  /* =========================
+     UPDATE CART STRUCTURE
+  ========================= */
+
+  c.cart = Object.keys(grouped).map(function(key) {
+
+    return grouped[key];
+
+  });
+
+
+  /* =========================
+     ]]>🔥<![CDATA[ NOTIFY HEADER WIDGET
+     (REAL-TIME CART SYNC)
+  ========================= */
+
+  window.dispatchEvent(
+    new Event("cartUpdated")
+  );
+
+  $scope.$emit("cartUpdated");
+
+};
+
+  /* =========================
+     START MIGRATION
+  ========================= */
+
+/*c.startMigration = function() {
+
+  if (c.getTotalRecords() === 0)
+    return;
+
+  c.migrating = true;
+  c.progress = 0;
+  c.showToast = false;
+
+  var cartRaw = JSON.parse(sessionStorage.getItem('migration_cart') || '[]');
+
+  // ]]>🔥<![CDATA[ estimate total records
+  c.total = 0;
+  cartRaw.forEach(function(g){
+    c.total += (g.records || []).length;
+  });
+
+  var progressInterval;
+
+  // ]]>🔥<![CDATA[ FAKE PROGRESS (smooth UI)
+  progressInterval = setInterval(function() {
+
+    if (c.progress < 90) {
+      c.progress += Math.floor(Math.random() * 5) + 1;
+    }
+
+    $scope.$applyAsync();
+
+  }, 500);
+
+  $scope.server.get({
+    action: "migrateRecords",
+    active_conn: sessionStorage.getItem('currentId'),
+    cart_length: c.total,
+    records: c.cart
+  }).then(function(response) {
+
+    clearInterval(progressInterval);
+
+    c.progress = 100;
+    c.migrating = false;
+
+    if (response.data && response.data.success) {
+      c.clearCart();
+      c.toastMessage = "Migration completed";
+    } else {
+      c.toastMessage = "Migration failed";
+      console.error(response.data.error);
+    }
+
+    c.showToast = true;
+
+    $timeout(function() {
+      c.showToast = false;
+    }, 4000);
+
+  }, function(err) {
+
+    clearInterval(progressInterval);
+
+    c.migrating = false;
+    c.progress = 0;
+
+    c.toastMessage = "Migration failed";
+    console.error(err);
+
+    c.showToast = true;
+
+    $timeout(function() {
+      c.showToast = false;
+    }, 4000);
+  });
+};*/
+	
+	c.startMigration = function() {
+
+  if (c.getTotalRecords() === 0)
+    return;
+	c.logs.push("Starting migration...");
+
+  /* OPEN MODAL */
+  c.showModal = true;
+  c.migrating = true;
+  c.progress = 0;
+  c.migrationResult = {};
+
+  var cartRaw = JSON.parse(sessionStorage.getItem('migration_cart') || '[]');
+
+  c.total = 0;
+  cartRaw.forEach(function(g){
+    c.total += (g.records || []).length;
+  });
+
+  var progressInterval;
+
+  /* ]]>🔥<![CDATA[ FAKE PROGRESS */
+  progressInterval = setInterval(function() {
+
+    if (c.progress < 90) {
+      c.progress += Math.floor(Math.random() * 5) + 1;
+    }
+
+    // prevent overflow
+    if (c.progress > 90) {
+      c.progress = 90;
+    }
+
+    $scope.$applyAsync();
+
+  }, 500);
+
+  /* SERVER CALL */
+  $scope.server.get({
+    action: "migrateRecords",
+    active_conn: sessionStorage.getItem('currentId'),
+    cart_length: c.total,
+    records: c.cart
+  }).then(function(response) {
+			clearInterval(progressInterval);
+
+			/* COMPLETE */
+			c.progress = 100;
+			c.migrating = false;
+    if (response.data && response.data.success) {
+			c.logs.push("Migration completed");
+			c.logs.push("Migration started at " + response.data.sTime);
+			c.logs.push("Migration completed at " + response.data.eTime);
+			c.isCompleted = true;
+			c.conn_name = response.data.conn_name;
+			c.inserted = response.data.inserted;
+			c.updated = response.data.updated;
+			c.total = response.data.total;
+			c.url = response.data.url;
+      c.migrationResult = response.data.result;
+      c.clearCart();
+    } else {
+			c.logs.push("Migration failed");
+      c.migrationResult = {
+        error: true,
+        message: "Migration failed"
+      };
+    }
+
+  }, function(err) {
+
+    clearInterval(progressInterval);
+
+    c.migrating = false;
+    c.progress = 0;
+
+    c.migrationResult = {
+      error: true,
+      message: "Migration failed"
+    };
+
+    console.error(err);
+  });
+};
+
+
+
+  /* =========================
+     REMOVE RECORD
+  ========================= */
+
+  c.removeRecord = function(tableIndex, recordIndex) {
+    var rec = c.cart[tableIndex].records[recordIndex];
+    var recordLabel = rec.number || rec.sys_id || "Record";
+
+    c.createNotification({
+      type: "queue_record_removed",
+      title: "Record removed from migration queue",
+      message: recordLabel + " removed from queue.",
+      priority: "info"
+    });
+
+    c.cart[tableIndex].records.splice(recordIndex, 1);
+
+    if (c.cart[tableIndex].records.length === 0) {
+      c.cart.splice(tableIndex, 1);
+    }
+
+    var raw = JSON.parse(sessionStorage.getItem("migration_cart") || "[]");
+
+    raw = raw.filter(function(r) {
+      return r.sys_id !== rec.sys_id;
+    });
+
+    sessionStorage.setItem("migration_cart", JSON.stringify(raw));
+		sessionStorage.setItem('cart_items', JSON.stringify((raw)))
+
+window.dispatchEvent(new Event("cartUpdated"));
+$scope.$emit("cartUpdated");
+  };
+
+  /* =========================
+     CLEAR CART
+  ========================= */
+
+  c.clearCart = function() {
+    c.cart = [];
+   sessionStorage.removeItem("migration_cart");
+
+window.dispatchEvent(new Event("cartUpdated"));
+$scope.$emit("cartUpdated");
+
+    c.createNotification({
+      type: "queue_cleared",
+      title: "Migration queue cleared",
+      message: "All records removed from migration queue.",
+      priority: "warning"
+    });
+  };
+
+  /* =========================
+     PREVIEW MODAL
+  ========================= */
+
+  c.previewOpen = false;
+  c.previewData = {};
+
+  c.openPreview = function(record) {
+    c.previewData = record;
+    c.previewOpen = true;
+  };
+
+  c.closePreview = function() {
+    c.previewOpen = false;
+  };
+
+  /* =========================
+     TOTAL RECORDS
+  ========================= */
+
+  c.getTotalRecords = function() {
+    var total = 0;
+    c.cart.forEach(function(table) {
+      total += table.records.length;
+    });
+    return total;
+  };
+
+  /* =========================
+     TOTAL TABLES
+  ========================= */
+
+  c.getTotalTables = function() {
+    return c.cart.length;
+  };
+
+  /* =========================
+     TOTAL SIZE
+  ========================= */
+
+  c.getTotalSize = function() {
+    var total = 0;
+    c.cart.forEach(function(table) {
+      table.records.forEach(function(rec) {
+        total += parseFloat(rec.size || 0);
+      });
+    });
+    return total.toFixed(1);
+  };
+
+  /* =========================
+     BATCH COUNT
+  ========================= */
+
+  c.getBatchCount = function() {
+    var total = c.getTotalRecords();
+    if (total === 0)
+      return 0;
+    return Math.ceil(total / c.batchSize);
+  };
+
+  /* =========================
+     AUTO LOAD CART
+  ========================= */
+
+  c.loadCart();
+
+  /* =========================
+     AUTO UPDATE IF STORAGE CHANGES
+  ========================= */
+
+  window.addEventListener("storage", function() {
+    $scope.$apply(function() {
+      c.loadCart();
+    });
+  });
+};]]></client_script>
+        <controller_as>c</controller_as>
+        <css>/* ===== Main Container ===== */
+.migration-cart {
+  display: flex;
+  max-height: calc(100vh - 64px);
+position:relative;
+  background: linear-gradient(
+    to bottom right,
+    #ffffff 0%,
+    rgba(13, 124, 143, 0.05) 50%,
+    rgba(23, 162, 184, 0.10) 100%
+  );
+}
+
+.con {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+    flex-basis: 260px;
+  flex-shrink:0;
+  height:100%;
+}
+.cart-svg-icon {
+  color: #94a3b8;
+}
+.main {
+  position:relative;
+  display: flex;
+  flex-direction: column;
+  height:100%;
+  gap:30px;
+  margin: 0 auto;
+  overflow-y:auto;
+  height:calc(100vh - 64px);
+  width: 100%;
+  padding: 30px 15%;
+}
+
+/* ===== Header ===== */
+.cart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+.cart-header h2 {
+  font-weight: 700;
+  margin-bottom: 5px;
+}
+
+.subtitle {
+  color: #64748b;
+  font-size: 14px;
+}
+
+/* ===== Back Button ===== */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #6b7280;
+  text-decoration: none;
+  font-size: 14px;
+  margin-bottom: 10px;
+  transition: all 0.2s ease;
+}
+
+.back-link:hover {
+  color: #1F8C95 ;
+}
+
+/* ===== Buttons ===== */
+.btn-danger {
+  background: #fff0f0;
+  border: 1px solid #ffc9c9;
+  color: #dc2626;
+  border-radius: 8px;
+  padding: 6px 14px;
+
+  transition: transform 0.15s ease;   /* ONLY animate scale */
+  box-shadow: none !important;        /* 🔥 force remove */
+}
+
+/* Hover → only scale */
+.btn-danger:hover {
+  transform: scale(1.08);
+  background: #fff0f0;
+  box-shadow: none !important;
+}
+
+/* Remove click/focus/active effects completely */
+.btn-danger:focus,
+.btn-danger:active,
+.btn-danger:focus:active {
+  box-shadow: none !important;
+  outline: none !important;
+  background: #fff0f0 !important;
+  color: #dc2626 !important;
+  transform: scale(1.05); /* optional slight press */
+}
+
+/* Remove Bootstrap default transition delay */
+.btn {
+  transition: none !important;
+}
+
+/* Remove click/active red effect */
+.btn-danger:active,
+.btn-danger:focus {
+  background: #fff0f0 !important;
+  color: #dc2626 !important;
+  box-shadow: none !important;
+  outline: none;
+}
+.btn-primary {
+   background: linear-gradient(to right, #128a9a, #0a5f6d);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+  transition: all 2s ease-out;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  color: white;
+}
+
+
+/* ===== Stats ===== */
+.stats-container {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 25px;
+}
+
+.stat-box {
+  flex: 1;
+  background: white;
+  padding: 22px;
+  border-radius: 14px;
+  text-align: center;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+}
+
+.stat-box h3 {
+  font-size: 26px;
+  font-weight: 700;
+}
+
+/* ===== Cart Section ===== */
+.cart-section {
+  background: white;
+  padding: 25px;
+  border-radius: 14px;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.04);
+  margin-bottom: 25px;
+}
+
+
+.cart-section.empty-mode {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 900px;
+  min-height: 420px;
+  margin: 0 auto;
+  border-radius: 18px;
+}
+.cart-section.has-records {
+  display: block;
+}
+.cart-section h4 {
+  margin-bottom: 20px;
+  font-weight: 600;
+}
+
+
+.empty-cart-screen {
+  width: 100%;
+  max-width: 650px;
+  text-align: center;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.empty-icon {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 25px;
+  font-size: 34px;
+  color: #94a3b8;
+}
+
+.empty-title {
+  font-size: 34px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 12px;
+}
+
+.empty-subtitle {
+  font-size: 17px;
+  color: #475569;
+  line-height: 1.7;
+  margin-bottom: 30px;
+   max-width: 600px;
+}
+.browse-btn {
+  background: #1F8C95 ;
+  color: white;
+  padding: 14px 30px;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 600;
+}
+.browse-btn:hover{
+   background: linear-gradient(to right, #128a9a, #0a5f6d);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+  transition: all 2s ease-out;
+}
+
+/* smooth transition */
+.browse-btn i {
+  transition: transform 0.25s ease;
+  display: inline-block;
+}
+
+/* move icon on hover */
+.browse-btn:hover i {
+  transform: translateX(4px);
+}
+/* ===== Table Card ===== */
+.table-card {
+  border-radius: 12px;
+  margin-bottom: 20px;
+  background: #f9fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 18px 22px;
+  background: #f1f5f9;
+}
+
+.badge-primary {
+  background: #1F8C95 ;
+  padding: 8px 18px;
+  border-radius: 999px;
+  color: white;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 40px;
+  line-height: 1;
+}
+
+
+/* ===== Record ===== */
+.record-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 18px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.record-number {
+  color: #1F8C95 ;
+}
+
+.size-badge {
+  background: #eef2ff;
+  padding: 3px 10px;
+  border-radius: 8px;
+}
+
+.table-header small {
+  font-weight: 700;
+  font-size: 14px;
+  color: #334155;
+}
+
+
+.table-start-btn svg {
+  margin-right: 8px;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+
+
+
+
+/* ===== Batch / Ready ===== */
+
+.ready-section {
+  background: linear-gradient(135deg, #dbeafe, #eff6ff);
+  padding: 25px;
+  border-radius: 14px;
+  margin: 0 0 20px 0;
+   display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+
+.table-header {
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  padding: 18px 22px;
+
+  background: #f1f5f9;
+
+  text-transform: uppercase;
+
+}
+ 
+/* Force EVERYTHING inside to stay in one line */
+
+.table-header,
+
+.table-header * {
+
+  white-space: nowrap !important;
+
+}
+ 
+/* Prevent flex wrapping completely */
+
+.table-header {
+
+  flex-wrap: nowrap;
+
+}
+ 
+/* If text is too long → show ... instead of breaking */
+
+.table-header .left {
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+
+}
+ 
+
+
+
+
+/* ===== Toast ===== */
+.migration-toast {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  background: #f1f5f9;
+  border-radius: 12px;
+  padding: 16px 20px;
+}
+
+/* ===== Loader ===== */
+.migration-loader {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  flex-direction:column;
+}
+
+.spinner {
+  width:50px;
+  height:50px;
+  border:5px solid #ccc;
+  border-top:5px solid #4CAF50;
+  border-radius:50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+/* ======Migration Modal======*/
+.migration-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.migration-modal {
+  width: 500px;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.modal-header {
+  padding: 15px;
+  border-bottom: 1px solid #ddd;
+}
+
+.modal-body {
+  padding: 15px;
+}
+
+.modal-footer {
+  padding: 10px;
+  text-align: right;
+  border-top: 1px solid #ddd;
+}
+
+.alert-success {
+  background: #e6f4ea;
+  color: #2e7d32;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 10px;
+}
+
+.alert-error {
+  background: #fdecea;
+  color: #c62828;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 10px;
+}
+
+.progress-bar-container {
+  width: 100%;
+  height: 12px;
+  background: #eee;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: #4caf50;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  margin-top: 5px;
+  font-size: 12px;
+}
+
+.logs-section {
+  margin-top: 15px;
+  border-radius: 6px;
+}
+
+.logs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logs-body {
+  background: #262829;
+  border-radius: 6px;
+  color: #ffffff;
+  height: 120px;
+  overflow-y: auto;
+  margin-top: 5px;
+  padding: 8px;
+  font-size: 12px;
+  border: 1px solid #ddd;
+}
+
+.download-btn {
+  background: #1F8C95 ;
+  font-size: 12px;
+  cursor: pointer;
+  color:white;
+}
+
+.btn-primary {
+  background: #1F8C95 ;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+}
+.btn-primary:hover{
+   background: linear-gradient(to right, #128a9a, #0a5f6d);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+  transition: all 2s ease-out;
+}
+
+/* ===== Preview ===== */
+.preview-overlay { 
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  justify-content: center; 
+  align-items: center;
+  z-index: 9999;
+}
+
+.preview-modal {
+  background: white;
+  width: 620px; 
+  border-radius: 18px; 
+  padding: 30px;
+  box-shadow: 0 20px 45px rgba(0,0,0,0.18);
+  position: relative; 
+}
+.preview-close {
+  position: absolute; 
+  top: 18px;
+  right: 20px;
+  font-size: 24px;
+  cursor: pointer;
+  color: #64748b; 
+  font-weight: 400;
+  transition: all 0.2s ease;
+}
+.preview-close:hover { 
+  color: #0f172a;
+  transform: scale(1.1); 
+}
+.preview-title { 
+  font-size: 24px; 
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 28px;
+} 
+
+.preview-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+} 
+
+.preview-grid label {
+  display: block; 
+  font-size: 13px;
+  font-weight: 600; 
+  color: #64748b; 
+  margin-bottom: 6px;
+} 
+
+.preview-grid div {
+  
+  font-size: 15px;
+  color: #0f172a;
+  line-height: 1.5;
+}
+
+
+.full-width {
+  grid-column:1 / span 2;
+}
+
+.preview-desc {
+  background: #f8fafc; 
+  padding: 14px;
+  border-radius: 10px;
+  min-height: 60px; 
+}
+
+.slider {
+  background: #1F8C95 ;
+  color:#1F8C95 ;
+}
+.queue-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.queue-header h4 {
+  margin: 0;
+  font-weight: 600;
+}
+
+.queue-start-btn {
+  min-width: 160px;
+}
+
+.table-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+
+.table-start-btn {
+  background: transparent;
+  border: 1px solid #1F8C95;
+  color: #1F8C95;
+  padding: 8px 18px;
+  border-radius: 999px;
+  font-size: 13px;
+  min-height: 40px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  transition: all 0.3s ease;
+}
+.ready-section { margin-bottom: 20px; }
+
+.table-start-btn {
+  background: transparent;
+  border: 1px solid #1F8C95;
+  color: #1F8C95;
+  padding: 8px 18px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+
+.table-start-btn:hover {
+  background: linear-gradient(to right, #128a9a, #0a5f6d);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.action-icon {
+  cursor: pointer;
+}
+
+
+</css>
+        <data_table>sp_instance</data_table>
+        <demo_data/>
+        <description/>
+        <docs/>
+        <field_list/>
+        <has_preview>true</has_preview>
+        <id/>
+        <internal>false</internal>
+        <link><![CDATA[function link(scope, element, attrs, controller) {
+  
+}]]></link>
+        <name>Cart Data Migration</name>
+        <option_schema/>
+        <public>false</public>
+        <roles/>
+        <script><![CDATA[(function(){
+
+	data.side = $sp.getWidget('dmm_sidebar');
+	//duration fields
+	var duration = 0;
+	var result = '', sTime = 0, eTime = 0;
+
+	/* =========================
+	   CREATE NOTIFICATION HANDLER
+	========================= */
+
+	if (input && input.action == "createNotification") {
+
+		var notif = new GlideRecord("x_sysus_data_mig_0_notifications");
+
+		notif.initialize();
+
+		notif.setValue("title", input.payload.title);
+		notif.setValue("message", input.payload.message);
+		notif.setValue("type", input.payload.type);
+		notif.setValue("priority", input.payload.priority);
+		notif.setValue("user", gs.getUserID());
+		notif.setValue("read", false);
+
+		notif.insert();
+
+		data.notificationCreated = true;
+
+		return;
+	}
+
+
+	/* =========================
+	   MIGRATION EXECUTION
+	========================= */
+
+	if (input && input.action == "migrateRecords") {
+
+		var username, password, sourceurl;
+
+
+		/* Migration Started Notification */
+
+		var startNotif = new GlideRecord("x_sysus_data_mig_0_notifications");
+
+		startNotif.initialize();
+
+		startNotif.title = "Migration started";
+		startNotif.message = "Migration process has started.";
+		startNotif.type = "migration_started";
+		startNotif.priority = "info";
+		startNotif.user = gs.getUserID();
+		startNotif.insert();
+
+
+		var gr = new GlideRecord('x_sysus_data_mig_0_connection');
+
+		gr.addQuery('sys_id', input.active_conn);
+		gr.query();
+
+		if (gr.next()) {
+
+			username = gr.getValue('username');
+			password = gr.getValue('password');
+			sourceurl = gr.getValue('url');
+			data.conn_name = gr.getValue('name');
+		}
+
+
+		var cart = input.records || [];
+
+		var recordsToMigrate = {};
+
+
+		/* Prepare table → sys_id mapping */
+
+		cart.forEach(function(tableGroup){
+
+			var table = tableGroup.name;
+
+			if (!recordsToMigrate[table])
+				recordsToMigrate[table] = [];
+
+			tableGroup.records.forEach(function(rec){
+				if (rec.sys_id)
+					recordsToMigrate[table].push(
+						String(rec.sys_id).trim()
+					);
+
+			});
+
+		});
+	
+
+		/* Run migration engine */
+
+		try {
+			var engine = new global.UnifiedMigrationEngine();
+
+			result = engine.batchMigration(
+
+				sourceurl,
+				username,
+				password,
+				recordsToMigrate
+
+			);
+
+
+			data.success = true;
+			data.result  = result;
+
+			/* Save migration result */
+			
+		var obj = {};
+
+		var mig = new GlideRecord('x_sysus_data_mig_0_migration_details');
+		mig.initialize();
+
+		var inserted = engine.stats.inserted || 0;
+		var updated  = engine.stats.updated  || 0;
+		var failed   = engine.stats.failed   || 0;
+
+		/* Calculate total fetched correctly */
+		var total = 0;
+
+		cart.forEach(function(tableGroup){
+				total += (tableGroup.records || []).length;
+		});
+
+		/* Safe success rate */
+		var successRate = 0;
+
+		if (total > 0) {
+				successRate = ((inserted + updated) / total) * 100;
+		}
+
+		/* Optional rounding */
+		successRate = Math.round(successRate * 100) / 100;
+
+		mig.setValue('instance_url', sourceurl);
+		mig.setValue('records_fetched', total);
+		mig.setValue('records_inserted', inserted);
+		mig.setValue('records_updated', updated);
+		mig.setValue('records_failed', failed);
+		mig.setValue('success_rate', successRate);
+		mig.setValue('duration', engine.durationText);
+		//console.log(engine.startTime + engine.endTime);
+		sTime = engine.startTime;
+		eTime = engine.endTime;
+		data.inserted = inserted;
+		data.updated = updated;
+		data.total = total;
+		data.url = sourceurl;
+		data.sTime = sTime.toString();
+		data.eTime = eTime.toString();
+
+		Object.keys(recordsToMigrate).forEach(function(key){
+				obj[key] = "true";
+		});
+
+		mig.setValue('table', JSON.stringify(obj));
+
+		/* (You forgot this ❗) */
+		mig.insert();
+
+
+
+			/* =========================
+			   MIGRATION RESULT NOTIFICATION
+			========================= */
+
+			var resultNotif = new GlideRecord("x_sysus_data_mig_0_notifications");
+
+			resultNotif.initialize();
+
+
+			if (engine.stats.failed == 0) {
+
+				resultNotif.title = "Migration completed successfully";
+
+				resultNotif.message =
+					(engine.stats.inserted + engine.stats.updated) +
+					" records migrated successfully.";
+
+				resultNotif.type = "migration_success";
+
+				resultNotif.priority = "success";
+
+			}
+
+			else if (
+				engine.stats.failed > 0 &&
+				(engine.stats.inserted + engine.stats.updated) > 0
+			) {
+
+				resultNotif.title =engine.stats.failed +
+					" records failed during migration.";
+
+				resultNotif.message =
+					engine.stats.failed +
+					" records failed during migration.";
+
+				resultNotif.type = "migration_warning";
+
+				resultNotif.priority = "warning";
+
+			}
+
+			else {
+
+				resultNotif.title = "Migration failed";
+
+				resultNotif.message =
+					"Migration failed. No records migrated.";
+
+				resultNotif.type = "migration_failed";
+
+				resultNotif.priority = "critical";
+
+			}
+
+
+			resultNotif.user = gs.getUserID();
+
+			resultNotif.insert();
+
+		}
+
+		catch (e) {
+
+			gs.error("Migration failed");
+			gs.error(e);
+
+			data.success = false;
+			data.error   = e.toString();
+
+
+			var failNotif = new GlideRecord("x_sysus_data_mig_0_notifications");
+
+			failNotif.initialize();
+
+			failNotif.title = "Migration failed";
+
+			failNotif.message = e.toString();
+
+			failNotif.type = "migration_failed";
+
+			failNotif.priority = "critical";
+
+			failNotif.user = gs.getUserID();
+
+			failNotif.insert();
+
+		}
+
+	}
+	
+	//ProgressBar Calculation
+	if (input && input.action == "getProgress") {
+
+    var eng = new global.UnifiedMigrationEngine();
+
+    var progress = eng.getProgress();
+
+    data.progress = progress;
+}
+
+})();]]></script>
+        <servicenow>false</servicenow>
+        <sys_class_name>sp_widget</sys_class_name>
+        <sys_created_by>iqra.magray</sys_created_by>
+        <sys_created_on>2026-02-27 09:24:08</sys_created_on>
+        <sys_id>0512abbd3b5f7a90deb2090eb3e45a03</sys_id>
+        <sys_mod_count>446</sys_mod_count>
+        <sys_name>Cart Data Migration</sys_name>
+        <sys_package display_value="Data Migration" source="x_sysus_data_mig_0">9977a0f8eb03f610084cfd50dad0cd43</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Data Migration">9977a0f8eb03f610084cfd50dad0cd43</sys_scope>
+        <sys_update_name>sp_widget_0512abbd3b5f7a90deb2090eb3e45a03</sys_update_name>
+        <sys_updated_by>munaib.ashraf</sys_updated_by>
+        <sys_updated_on>2026-04-02 13:18:50</sys_updated_on>
+        <template><![CDATA[<div class="migration-cart">
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <sp-widget widget="data.side"></sp-widget>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main">
+
+    <!-- Header -->
+    <div class="cart-header">
+      <div>
+        <h2>Migration Queue</h2>
+        <p class="subtitle">Review and configure your migration selection</p>
+      </div>
+      <button class="btn btn-danger btn-sm" ng-if="c.cart.length > 0" ng-click="c.clearCart()">
+        <i class="fa fa-trash"></i> Clear Queue
+      </button>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-container" ng-if="c.cart.length > 0">
+      <div class="stat-box">
+        <h3>{{c.getTotalRecords()}}</h3>
+        <p>Record(s)</p>
+      </div>
+      <div class="stat-box">
+        <h3>{{c.getTotalTables()}}</h3>
+        <p>Table(s)</p>
+      </div>
+    </div>
+
+    <!-- Cart Content -->
+    <div class="cart-section" ng-class="{'has-records': c.cart.length > 0, 'empty-mode': c.cart.length == 0}">
+
+      <!-- Empty Cart -->
+      <div ng-if="c.cart.length == 0" class="empty-cart-screen">
+        <div class="empty-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="8" cy="21" r="1"/>
+            <circle cx="19" cy="21" r="1"/>
+            <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>
+          </svg>
+        </div>
+
+        <div class="empty-title">Your Queue is empty</div>
+
+        <div class="empty-subtitle">
+          Browse records and add them to your queue to start building<br>
+          your migration
+        </div>
+
+        <a ng-href="datamigration?id=dm_browse_tables&sys_id={{c.check}}" class="browse-btn">
+          Browse Records <i class="fa fa-arrow-right"></i>
+        </a>
+      </div>
+
+      <!-- Ready to Migrate -->
+      <div class="ready-section" ng-if="c.cart.length > 0">
+
+        <div>
+          <h4>Ready to Migrate</h4>
+          <p>
+            You are about to migrate 
+            <strong>{{c.getTotalRecords()}} record(s)</strong> 
+            from 
+            <strong>{{c.getTotalTables()}} table(s)</strong>.
+          </p>
+        </div>
+
+        <button class="btn btn-primary table-start-btn"
+                ng-disabled="c.getTotalRecords() == 0"
+                ng-click="c.startMigration()">
+
+          <svg xmlns="http://www.w3.org/2000/svg"
+               width="16"
+               height="16"
+               viewBox="0 0 24 24"
+               fill="none"
+               stroke="currentColor"
+               stroke-width="2"
+               stroke-linecap="round"
+               stroke-linejoin="round">
+            <path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/>
+          </svg>
+
+          Start Migration
+        </button>
+
+      </div>
+
+      <!-- Tables in Queue -->
+      <div class="table-card" ng-repeat="table in c.cart">
+
+     <div class="table-header">
+  <div class="left">
+    <strong>Table Name:</strong>
+    <strong>{{table.label}}</strong>
+    <small>{{table.name}}</small>
+  </div>
+          <div class="table-header-actions">
+            <span class="badge badge-primary">{{table.records.length}} record(s)</span>
+          </div>
+
+        </div>
+
+        <div class="record-item" ng-repeat="rec in table.records">
+          <div>
+            <strong class="record-number">{{rec.number}}</strong>
+            <p>{{rec.short_description}}</p>
+          </div>
+
+          <div class="actions">
+            <i class="fa fa-eye action-icon" ng-click="c.openPreview(rec)"></i>
+            <i class="fa fa-trash action-icon text-danger" ng-click="c.removeRecord($parent.$index, $index)"></i>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Toast -->
+    <div class="migration-toast" ng-show="c.showToast">{{c.toastMessage}}</div>
+
+    <!-- Migration Modal -->
+    <div class="migration-modal-backdrop" ng-if="c.showModal">
+      <div class="migration-modal">
+
+        <div class="modal-header">
+          <h3>Run Migration</h3>
+          <div class="sub-heading-modal">
+            Migrating <b>{{c.selected_recs}}</b> record(s) using connection: <b>{{c.conn_name}}</b>
+          </div>
+        </div>
+
+        <div class="modal-body">
+
+          <div class="alert-success" ng-if="!c.migrating && !c.migrationResult.error">
+            ✔ Migration Completed Successfully<br/>
+            Progress: {{c.inserted + c.updated}} / {{c.total}}
+          </div>
+
+          <div class="alert-error" ng-if="c.migrationResult.error">
+            ✖ {{c.migrationResult.message}}
+          </div>
+
+          <div>
+            <strong>Overall Progress</strong>
+
+            <div class="progress-bar-container">
+              <div class="progress-bar-fill"
+                   ng-style="{'width': c.progress + '%'}">
+              </div>
+            </div>
+
+            <div class="progress-text">
+              {{c.progress}}%
+            </div>
+          </div>
+
+          <div class="logs-section">
+            <!-- <div class="logs-header">
+              <strong>Migration Logs</strong>
+              <button class="download-btn">Download Logs</button>
+            </div> -->
+
+            <div class="logs-body">
+              <div ng-repeat="log in c.logs track by $index">
+                {{log}}
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- FOOTER -->
+    		<div class="modal-footer">
+      <button class="btn-primary"
+              ng-disabled="!c.isCompleted"
+              ng-click="c.closeModal()">
+        Done
+      </button>
+    </div>
+
+      </div>
+    </div>
+
+    <!-- Preview Modal -->
+    <div class="preview-overlay" ng-if="c.previewOpen">
+      <div class="preview-modal">
+        <div class="preview-close" ng-click="c.closePreview()">×</div>
+        <h3 class="preview-title">Record Preview</h3>
+
+        <div class="preview-grid">
+          <div>
+            <label>Record Number</label>
+            <div>{{c.previewData.number}}</div>
+          </div>
+
+          <div>
+            <label>Table</label>
+            <div>{{c.previewData.table}}</div>
+          </div>
+
+          <div>
+            <label>Sys ID</label>
+            <div>{{c.previewData.sys_id}}</div>
+          </div>
+
+          <div class="full-width">
+            <label>Short Description</label>
+            <div class="preview-desc">{{c.previewData.short_description}}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+]]></template>
+    </sp_widget>
+</record_update>

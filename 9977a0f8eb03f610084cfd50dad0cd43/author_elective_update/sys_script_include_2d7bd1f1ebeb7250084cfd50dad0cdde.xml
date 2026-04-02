@@ -1,0 +1,837 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
+    <sys_script_include action="DELETE">
+        <access>package_private</access>
+        <active>true</active>
+        <api_name>x_sysus_data_mig_0.UnifiedMigrationEngine</api_name>
+        <caller_access/>
+        <client_callable>false</client_callable>
+        <description/>
+        <mobile_callable>false</mobile_callable>
+        <name>UnifiedMigrationEngine</name>
+        <sandbox_callable>false</sandbox_callable>
+        <script><![CDATA[var UnifiedMigrationEngine = Class.create();
+UnifiedMigrationEngine.prototype = {
+
+    initialize: function() {
+
+        this._migratedRecords = {};
+        this._cacheRefFields = {};
+        this._recursionDepth = 0;
+        this.MAX_RECURSION = 5;
+
+        this.SOURCE_URL = '';
+        this.SOURCE_USER = '';
+        this.SOURCE_PSWD = '';
+
+        this.MIGRATE_ALL_REFS = true;
+    },
+
+    /* =====================================================
+       MAIN ENTRY
+    ===================================================== */
+
+    migrateRecord: function(source_url, username, password, table, sysId) {
+
+        this.SOURCE_URL = source_url;
+        this.SOURCE_USER = username;
+        this.SOURCE_PSWD = password;
+
+        gs.info(']]>🚀<![CDATA[ START MIGRATION: ' + table + '/' + sysId);
+
+        var targetId = this.migrateWithDependencies(table, sysId);
+
+        if (targetId) {
+            this.migrateRelatedLists(table, sysId, targetId);
+            this.validateMigration(table, targetId);
+        }
+
+        return targetId;
+    },
+
+    /* =====================================================
+       DEPENDENCY MIGRATION (REFERENCE FIELDS)
+    ===================================================== */
+
+    migrateWithDependencies: function(table, sourceSysId) {
+
+        var cacheKey = table + "_" + sourceSysId;
+
+        if (this._migratedRecords[cacheKey])
+            return this._migratedRecords[cacheKey];
+
+        this._recursionDepth++;
+
+        if (this._recursionDepth > this.MAX_RECURSION) {
+            gs.warn("⚠️ Recursion limit reached");
+            this._recursionDepth--;
+            return '';
+        }
+
+        try {
+
+            var record = this.fetchSourceRecord(table, sourceSysId);
+            if (!record) return '';
+
+            var refFields = this._getCachedRefFields(table);
+
+            for (var i = 0; i < refFields.length; i++) {
+
+                var rf = refFields[i];
+                var srcRef = this.normalizeRef(record[rf.field]);
+
+                if (!srcRef) continue;
+
+                var targetRef = this.migrateWithDependencies(rf.refTable, srcRef);
+
+                if (targetRef)
+                    record[rf.field] = targetRef;
+            }
+
+            var targetId = this.safeUpsert(record, table, record.sys_id);
+
+            this._migratedRecords[cacheKey] = targetId;
+
+            return targetId;
+
+        } catch (e) {
+
+            gs.error("Migration error: " + e);
+
+        } finally {
+
+            this._recursionDepth--;
+
+        }
+
+        return '';
+    },
+
+    /* =====================================================
+       RELATED LIST MIGRATION
+    ===================================================== */
+
+    migrateRelatedLists: function(parentTable, sourceParentId, targetParentId) {
+
+        gs.info(']]>📦<![CDATA[ Discovering related lists for ' + parentTable);
+
+        var relatedLists = this.discoverRelatedLists(parentTable);
+
+        for (var i = 0; i < relatedLists.length; i++) {
+
+            var rl = relatedLists[i];
+
+            var children = this.fetchChildren(
+                rl.childTable,
+                rl.refField,
+                parentTable,
+                sourceParentId
+            );
+
+            if (!children.length)
+                continue;
+
+            gs.info("]]>📂<![CDATA[ Migrating " + children.length + " records from " + rl.childTable);
+
+            for (var c = 0; c < children.length; c++) {
+
+                var child = children[c];
+
+                child[rl.refField] = targetParentId;
+
+                this.safeUpsert(child, rl.childTable, child.sys_id);
+            }
+        }
+    },
+
+    /* =====================================================
+       DISCOVER RELATED LISTS (DYNAMIC)
+    ===================================================== */
+
+    discoverRelatedLists: function(parentTable) {
+
+        var baseUrl = this.SOURCE_URL.replace(/\/+$/, '');
+
+        var api = new sn_ws.RESTMessageV2();
+
+        var query = "internal_type=reference&reference=" + parentTable;
+
+        api.setEndpoint(baseUrl +
+            "/api/now/table/sys_dictionary?sysparm_query=" +
+            encodeURIComponent(query) +
+            "&sysparm_fields=name,element");
+
+        api.setHttpMethod("GET");
+        api.setBasicAuth(this.SOURCE_USER, this.SOURCE_PSWD);
+
+        var response = api.execute();
+
+        if (response.getStatusCode() !== 200)
+            return [];
+
+        var data = JSON.parse(response.getBody());
+
+        var rel = [];
+
+        for (var i = 0; i < data.result.length; i++) {
+
+            rel.push({
+                childTable: data.result[i].name,
+                refField: data.result[i].element
+            });
+
+        }
+
+        rel.push({ childTable: "sys_attachment", refField: "table_sys_id" });
+        rel.push({ childTable: "sys_journal_field", refField: "element_id" });
+
+        return rel;
+    },
+
+    /* =====================================================
+       FETCH SOURCE RECORD
+    ===================================================== */
+
+    fetchSourceRecord: function(table, sysId) {
+
+        var api = new sn_ws.RESTMessageV2();
+        var baseUrl = this.SOURCE_URL.replace(/\/+$/, '');
+
+        api.setEndpoint(baseUrl + "/api/now/table/" + table + "/" + sysId);
+
+        api.setHttpMethod("GET");
+        api.setBasicAuth(this.SOURCE_USER, this.SOURCE_PSWD);
+
+        var response = api.execute();
+
+        if (response.getStatusCode() !== 200) {
+            gs.error("Fetch failed");
+            return null;
+        }
+
+        var data = JSON.parse(response.getBody());
+
+        return data.result || null;
+    },
+
+    /* =====================================================
+       FETCH CHILD RECORDS
+    ===================================================== */
+
+    fetchChildren: function(childTable, refField, parentTable, parentSysId) {
+
+        var api = new sn_ws.RESTMessageV2();
+
+        var baseUrl = this.SOURCE_URL.replace(/\/+$/, '');
+
+        var query;
+
+        if (childTable == "sys_attachment")
+            query = "table_sys_id=" + parentSysId + "&table_name=" + parentTable;
+
+        else if (childTable == "sys_journal_field")
+            query = "element_id=" + parentSysId + "&name=" + parentTable;
+
+        else
+            query = refField + "=" + parentSysId;
+
+        api.setEndpoint(baseUrl +
+            "/api/now/table/" + childTable +
+            "?sysparm_query=" + encodeURIComponent(query) +
+            "&sysparm_limit=10000");
+
+        api.setHttpMethod("GET");
+        api.setBasicAuth(this.SOURCE_USER, this.SOURCE_PSWD);
+
+        var response = api.execute();
+
+        if (response.getStatusCode() !== 200)
+            return [];
+
+        var data = JSON.parse(response.getBody());
+
+        return data.result || [];
+    },
+
+    /* =====================================================
+       SAFE UPSERT (INSERT / UPDATE)
+    ===================================================== */
+
+    safeUpsert: function(fieldMap, table, sysId) {
+
+        var gr = new GlideRecord(table);
+
+        gr.setWorkflow(false);
+        gr.setUseEngines(false);
+        gr.autoSysFields(false);
+
+        var exists = sysId && gr.get(sysId);
+
+        if (!exists) {
+
+            gr.initialize();
+
+            if (sysId)
+                gr.setNewGuidValue(sysId);
+        }
+
+        for (var f in fieldMap) {
+
+            if (!gr.isValidField(f))
+                continue;
+
+            var v = fieldMap[f];
+
+            if (v && typeof v === "object" && v.value)
+                v = v.value;
+
+            if (Array.isArray(v))
+                continue;
+
+            try {
+                gr.setValue(f, v);
+            } catch (e) {}
+        }
+
+        return exists ? gr.update() : gr.insert();
+    },
+
+    /* =====================================================
+       REFERENCE FIELD DISCOVERY
+    ===================================================== */
+
+    getReferenceFields: function(table) {
+
+        var api = new sn_ws.RESTMessageV2();
+
+        var baseUrl = this.SOURCE_URL.replace(/\/+$/, '');
+
+        api.setEndpoint(baseUrl +
+            "/api/now/table/sys_dictionary?sysparm_query=name=" +
+            table +
+            "&internal_type=reference");
+
+        api.setHttpMethod("GET");
+        api.setBasicAuth(this.SOURCE_USER, this.SOURCE_PSWD);
+
+        var response = api.execute();
+
+        if (response.getStatusCode() !== 200)
+            return [];
+
+        var data = JSON.parse(response.getBody());
+
+        var refs = [];
+
+        for (var i = 0; i < data.result.length; i++) {
+
+            refs.push({
+                field: data.result[i].element,
+                refTable: data.result[i].reference
+            });
+
+        }
+
+        return refs;
+    },
+
+    _getCachedRefFields: function(table) {
+
+        if (!this._cacheRefFields[table])
+            this._cacheRefFields[table] = this.getReferenceFields(table);
+
+        return this._cacheRefFields[table];
+    },
+
+    normalizeRef: function(v) {
+
+        if (v && typeof v === "object" && v.value)
+            return String(v.value);
+
+        return String(v || "");
+    },
+
+    /* =====================================================
+       BATCH MIGRATION
+    ===================================================== */
+
+    batchMigration: function(source_url, username, password, table, sysIdArray) {
+
+        var results = {};
+
+        for (var i = 0; i < sysIdArray.length; i++) {
+
+            var src = sysIdArray[i];
+
+            try {
+
+                var id = this.migrateRecord(
+                    source_url,
+                    username,
+                    password,
+                    table,
+                    src
+                );
+
+                results[src] = id;
+
+            } catch (e) {
+
+                results[src] = "FAILED";
+            }
+        }
+
+        return results;
+    },
+
+    validateMigration: function(table, sysId) {
+
+        var gr = new GlideRecord(table);
+
+        if (gr.get(sysId))
+            gs.info("✅ Migration verified: " + table);
+    },
+
+    type: 'UnifiedMigrationEngine'
+};]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>faizan.latief</sys_created_by>
+        <sys_created_on>2026-03-11 10:21:53</sys_created_on>
+        <sys_id>2d7bd1f1ebeb7250084cfd50dad0cdde</sys_id>
+        <sys_mod_count>1</sys_mod_count>
+        <sys_name>UnifiedMigrationEngine</sys_name>
+        <sys_package display_value="Data Migration" source="x_sysus_data_mig_0">9977a0f8eb03f610084cfd50dad0cd43</sys_package>
+        <sys_policy>read</sys_policy>
+        <sys_scope display_value="Data Migration">9977a0f8eb03f610084cfd50dad0cd43</sys_scope>
+        <sys_update_name>sys_script_include_2d7bd1f1ebeb7250084cfd50dad0cdde</sys_update_name>
+        <sys_updated_by>faizan.latief</sys_updated_by>
+        <sys_updated_on>2026-03-11 10:34:41</sys_updated_on>
+    </sys_script_include>
+    <sys_update_version action="INSERT_OR_UPDATE">
+        <action>DELETE</action>
+        <application display_value="Data Migration">9977a0f8eb03f610084cfd50dad0cd43</application>
+        <file_path/>
+        <instance_id>3c94a895dbee3f0452dd2f17d496195e</instance_id>
+        <instance_name>sysusademo5</instance_name>
+        <name>sys_script_include_2d7bd1f1ebeb7250084cfd50dad0cdde</name>
+        <payload>&lt;?xml version="1.0" encoding="UTF-8"?&gt;&lt;record_update table="sys_script_include"&gt;&lt;sys_script_include action="INSERT_OR_UPDATE"&gt;&lt;access&gt;package_private&lt;/access&gt;&lt;active&gt;true&lt;/active&gt;&lt;api_name&gt;x_sysus_data_mig_0.UnifiedMigrationEngine&lt;/api_name&gt;&lt;caller_access/&gt;&lt;client_callable&gt;false&lt;/client_callable&gt;&lt;description/&gt;&lt;mobile_callable&gt;false&lt;/mobile_callable&gt;&lt;name&gt;UnifiedMigrationEngine&lt;/name&gt;&lt;sandbox_callable&gt;false&lt;/sandbox_callable&gt;&lt;script&gt;&lt;![CDATA[var UnifiedMigrationEngine = Class.create();
+UnifiedMigrationEngine.prototype = {
+
+    initialize: function() {
+
+        this._migratedRecords = {};
+        this._cacheRefFields = {};
+        this._recursionDepth = 0;
+        this.MAX_RECURSION = 5;
+
+        this.SOURCE_URL = '';
+        this.SOURCE_USER = '';
+        this.SOURCE_PSWD = '';
+
+        this.MIGRATE_ALL_REFS = true;
+    },
+
+    /* =====================================================
+       MAIN ENTRY
+    ===================================================== */
+
+    migrateRecord: function(source_url, username, password, table, sysId) {
+
+        this.SOURCE_URL = source_url;
+        this.SOURCE_USER = username;
+        this.SOURCE_PSWD = password;
+
+        gs.info(']]&gt;🚀&lt;![CDATA[ START MIGRATION: ' + table + '/' + sysId);
+
+        var targetId = this.migrateWithDependencies(table, sysId);
+
+        if (targetId) {
+            this.migrateRelatedLists(table, sysId, targetId);
+            this.validateMigration(table, targetId);
+        }
+
+        return targetId;
+    },
+
+    /* =====================================================
+       DEPENDENCY MIGRATION (REFERENCE FIELDS)
+    ===================================================== */
+
+    migrateWithDependencies: function(table, sourceSysId) {
+
+        var cacheKey = table + "_" + sourceSysId;
+
+        if (this._migratedRecords[cacheKey])
+            return this._migratedRecords[cacheKey];
+
+        this._recursionDepth++;
+
+        if (this._recursionDepth &gt; this.MAX_RECURSION) {
+            gs.warn("⚠️ Recursion limit reached");
+            this._recursionDepth--;
+            return '';
+        }
+
+        try {
+
+            var record = this.fetchSourceRecord(table, sourceSysId);
+            if (!record) return '';
+
+            var refFields = this._getCachedRefFields(table);
+
+            for (var i = 0; i &lt; refFields.length; i++) {
+
+                var rf = refFields[i];
+                var srcRef = this.normalizeRef(record[rf.field]);
+
+                if (!srcRef) continue;
+
+                var targetRef = this.migrateWithDependencies(rf.refTable, srcRef);
+
+                if (targetRef)
+                    record[rf.field] = targetRef;
+            }
+
+            var targetId = this.safeUpsert(record, table, record.sys_id);
+
+            this._migratedRecords[cacheKey] = targetId;
+
+            return targetId;
+
+        } catch (e) {
+
+            gs.error("Migration error: " + e);
+
+        } finally {
+
+            this._recursionDepth--;
+
+        }
+
+        return '';
+    },
+
+    /* =====================================================
+       RELATED LIST MIGRATION
+    ===================================================== */
+
+    migrateRelatedLists: function(parentTable, sourceParentId, targetParentId) {
+
+        gs.info(']]&gt;📦&lt;![CDATA[ Discovering related lists for ' + parentTable);
+
+        var relatedLists = this.discoverRelatedLists(parentTable);
+
+        for (var i = 0; i &lt; relatedLists.length; i++) {
+
+            var rl = relatedLists[i];
+
+            var children = this.fetchChildren(
+                rl.childTable,
+                rl.refField,
+                parentTable,
+                sourceParentId
+            );
+
+            if (!children.length)
+                continue;
+
+            gs.info("]]&gt;📂&lt;![CDATA[ Migrating " + children.length + " records from " + rl.childTable);
+
+            for (var c = 0; c &lt; children.length; c++) {
+
+                var child = children[c];
+
+                child[rl.refField] = targetParentId;
+
+                this.safeUpsert(child, rl.childTable, child.sys_id);
+            }
+        }
+    },
+
+    /* =====================================================
+       DISCOVER RELATED LISTS (DYNAMIC)
+    ===================================================== */
+
+    discoverRelatedLists: function(parentTable) {
+
+        var baseUrl = this.SOURCE_URL.replace(/\/+$/, '');
+
+        var api = new sn_ws.RESTMessageV2();
+
+        var query = "internal_type=reference&amp;reference=" + parentTable;
+
+        api.setEndpoint(baseUrl +
+            "/api/now/table/sys_dictionary?sysparm_query=" +
+            encodeURIComponent(query) +
+            "&amp;sysparm_fields=name,element");
+
+        api.setHttpMethod("GET");
+        api.setBasicAuth(this.SOURCE_USER, this.SOURCE_PSWD);
+
+        var response = api.execute();
+
+        if (response.getStatusCode() !== 200)
+            return [];
+
+        var data = JSON.parse(response.getBody());
+
+        var rel = [];
+
+        for (var i = 0; i &lt; data.result.length; i++) {
+
+            rel.push({
+                childTable: data.result[i].name,
+                refField: data.result[i].element
+            });
+
+        }
+
+        rel.push({ childTable: "sys_attachment", refField: "table_sys_id" });
+        rel.push({ childTable: "sys_journal_field", refField: "element_id" });
+
+        return rel;
+    },
+
+    /* =====================================================
+       FETCH SOURCE RECORD
+    ===================================================== */
+
+    fetchSourceRecord: function(table, sysId) {
+
+        var api = new sn_ws.RESTMessageV2();
+        var baseUrl = this.SOURCE_URL.replace(/\/+$/, '');
+
+        api.setEndpoint(baseUrl + "/api/now/table/" + table + "/" + sysId);
+
+        api.setHttpMethod("GET");
+        api.setBasicAuth(this.SOURCE_USER, this.SOURCE_PSWD);
+
+        var response = api.execute();
+
+        if (response.getStatusCode() !== 200) {
+            gs.error("Fetch failed");
+            return null;
+        }
+
+        var data = JSON.parse(response.getBody());
+
+        return data.result || null;
+    },
+
+    /* =====================================================
+       FETCH CHILD RECORDS
+    ===================================================== */
+
+    fetchChildren: function(childTable, refField, parentTable, parentSysId) {
+
+        var api = new sn_ws.RESTMessageV2();
+
+        var baseUrl = this.SOURCE_URL.replace(/\/+$/, '');
+
+        var query;
+
+        if (childTable == "sys_attachment")
+            query = "table_sys_id=" + parentSysId + "&amp;table_name=" + parentTable;
+
+        else if (childTable == "sys_journal_field")
+            query = "element_id=" + parentSysId + "&amp;name=" + parentTable;
+
+        else
+            query = refField + "=" + parentSysId;
+
+        api.setEndpoint(baseUrl +
+            "/api/now/table/" + childTable +
+            "?sysparm_query=" + encodeURIComponent(query) +
+            "&amp;sysparm_limit=10000");
+
+        api.setHttpMethod("GET");
+        api.setBasicAuth(this.SOURCE_USER, this.SOURCE_PSWD);
+
+        var response = api.execute();
+
+        if (response.getStatusCode() !== 200)
+            return [];
+
+        var data = JSON.parse(response.getBody());
+
+        return data.result || [];
+    },
+
+    /* =====================================================
+       SAFE UPSERT (INSERT / UPDATE)
+    ===================================================== */
+
+    safeUpsert: function(fieldMap, table, sysId) {
+
+        var gr = new GlideRecord(table);
+
+        gr.setWorkflow(false);
+        gr.setUseEngines(false);
+        gr.autoSysFields(false);
+
+        var exists = sysId &amp;&amp; gr.get(sysId);
+
+        if (!exists) {
+
+            gr.initialize();
+
+            if (sysId)
+                gr.setNewGuidValue(sysId);
+        }
+
+        for (var f in fieldMap) {
+
+            if (!gr.isValidField(f))
+                continue;
+
+            var v = fieldMap[f];
+
+            if (v &amp;&amp; typeof v === "object" &amp;&amp; v.value)
+                v = v.value;
+
+            if (Array.isArray(v))
+                continue;
+
+            try {
+                gr.setValue(f, v);
+            } catch (e) {}
+        }
+
+        return exists ? gr.update() : gr.insert();
+    },
+
+    /* =====================================================
+       REFERENCE FIELD DISCOVERY
+    ===================================================== */
+
+    getReferenceFields: function(table) {
+
+        var api = new sn_ws.RESTMessageV2();
+
+        var baseUrl = this.SOURCE_URL.replace(/\/+$/, '');
+
+        api.setEndpoint(baseUrl +
+            "/api/now/table/sys_dictionary?sysparm_query=name=" +
+            table +
+            "&amp;internal_type=reference");
+
+        api.setHttpMethod("GET");
+        api.setBasicAuth(this.SOURCE_USER, this.SOURCE_PSWD);
+
+        var response = api.execute();
+
+        if (response.getStatusCode() !== 200)
+            return [];
+
+        var data = JSON.parse(response.getBody());
+
+        var refs = [];
+
+        for (var i = 0; i &lt; data.result.length; i++) {
+
+            refs.push({
+                field: data.result[i].element,
+                refTable: data.result[i].reference
+            });
+
+        }
+
+        return refs;
+    },
+
+    _getCachedRefFields: function(table) {
+
+        if (!this._cacheRefFields[table])
+            this._cacheRefFields[table] = this.getReferenceFields(table);
+
+        return this._cacheRefFields[table];
+    },
+
+    normalizeRef: function(v) {
+
+        if (v &amp;&amp; typeof v === "object" &amp;&amp; v.value)
+            return String(v.value);
+
+        return String(v || "");
+    },
+
+    /* =====================================================
+       BATCH MIGRATION
+    ===================================================== */
+
+    batchMigration: function(source_url, username, password, table, sysIdArray) {
+
+        var results = {};
+
+        for (var i = 0; i &lt; sysIdArray.length; i++) {
+
+            var src = sysIdArray[i];
+
+            try {
+
+                var id = this.migrateRecord(
+                    source_url,
+                    username,
+                    password,
+                    table,
+                    src
+                );
+
+                results[src] = id;
+
+            } catch (e) {
+
+                results[src] = "FAILED";
+            }
+        }
+
+        return results;
+    },
+
+    validateMigration: function(table, sysId) {
+
+        var gr = new GlideRecord(table);
+
+        if (gr.get(sysId))
+            gs.info("✅ Migration verified: " + table);
+    },
+
+    type: 'UnifiedMigrationEngine'
+};]]&gt;&lt;/script&gt;&lt;sys_class_name&gt;sys_script_include&lt;/sys_class_name&gt;&lt;sys_created_by&gt;faizan.latief&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2026-03-11 10:21:53&lt;/sys_created_on&gt;&lt;sys_id&gt;2d7bd1f1ebeb7250084cfd50dad0cdde&lt;/sys_id&gt;&lt;sys_mod_count&gt;1&lt;/sys_mod_count&gt;&lt;sys_name&gt;UnifiedMigrationEngine&lt;/sys_name&gt;&lt;sys_package display_value="Data Migration" source="x_sysus_data_mig_0"&gt;9977a0f8eb03f610084cfd50dad0cd43&lt;/sys_package&gt;&lt;sys_policy&gt;read&lt;/sys_policy&gt;&lt;sys_scope display_value="Data Migration"&gt;9977a0f8eb03f610084cfd50dad0cd43&lt;/sys_scope&gt;&lt;sys_update_name&gt;sys_script_include_2d7bd1f1ebeb7250084cfd50dad0cdde&lt;/sys_update_name&gt;&lt;sys_updated_by&gt;faizan.latief&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2026-03-11 10:34:41&lt;/sys_updated_on&gt;&lt;/sys_script_include&gt;&lt;/record_update&gt;</payload>
+        <payload_hash>-473467731</payload_hash>
+        <record_name>UnifiedMigrationEngine</record_name>
+        <reverted_from/>
+        <source>3dee6cf03b1b7290deb2090eb3e45a5a</source>
+        <source_table>sys_update_set</source_table>
+        <state>previous</state>
+        <sys_created_by>faizan.latief</sys_created_by>
+        <sys_created_on>2026-03-11 10:34:41</sys_created_on>
+        <sys_id>4ab521b1eb2f7250084cfd50dad0cd8c</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_recorded_at>19cdc7686900000001</sys_recorded_at>
+        <sys_updated_by>faizan.latief</sys_updated_by>
+        <sys_updated_on>2026-03-11 10:34:41</sys_updated_on>
+        <type>Script Include</type>
+        <update_guid>c2b521b10f2f7250f062f282e2b6ad8b</update_guid>
+        <update_guid_history>c2b521b10f2f7250f062f282e2b6ad8b:-473467731,3ec22d7d76eb7250ca87ff83d86e5e16:-1938151763</update_guid_history>
+    </sys_update_version>
+    <sys_metadata_delete action="INSERT_OR_UPDATE">
+        <sys_audit_delete/>
+        <sys_class_name>sys_metadata_delete</sys_class_name>
+        <sys_created_by>faizan.latief</sys_created_by>
+        <sys_created_on>2026-03-11 10:37:50</sys_created_on>
+        <sys_db_object display_value="" name="sys_script_include">sys_script_include</sys_db_object>
+        <sys_id>024f74c2a9584034802b16564b11e1e4</sys_id>
+        <sys_metadata>2d7bd1f1ebeb7250084cfd50dad0cdde</sys_metadata>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>UnifiedMigrationEngine</sys_name>
+        <sys_package display_value="Data Migration" source="x_sysus_data_mig_0">9977a0f8eb03f610084cfd50dad0cd43</sys_package>
+        <sys_parent/>
+        <sys_policy>read</sys_policy>
+        <sys_scope display_value="Data Migration">9977a0f8eb03f610084cfd50dad0cd43</sys_scope>
+        <sys_scope_delete display_value="">5e2f1aae80864cfaa58b581383745104</sys_scope_delete>
+        <sys_update_name>sys_script_include_2d7bd1f1ebeb7250084cfd50dad0cdde</sys_update_name>
+        <sys_update_version display_value="sys_script_include_2d7bd1f1ebeb7250084cfd50dad0cdde">4ab521b1eb2f7250084cfd50dad0cd8c</sys_update_version>
+        <sys_updated_by>faizan.latief</sys_updated_by>
+        <sys_updated_on>2026-03-11 10:37:50</sys_updated_on>
+    </sys_metadata_delete>
+</record_update>

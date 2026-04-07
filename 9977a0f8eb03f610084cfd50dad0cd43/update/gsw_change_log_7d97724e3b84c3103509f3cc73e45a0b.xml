@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="gsw_change_log">
+    <gsw_change_log action="INSERT_OR_UPDATE">
+        <change_date>2026-04-06 07:42:15</change_date>
+        <changed_by display_value="Irfan Wani">9dc528583bc7f210deb2090eb3e45a29</changed_by>
+        <content display_value="ITSM Virtual Agent Conversations*">8ea99c7b535e10108d1eddeeff7b1259</content>
+        <related_change_log_entry/>
+        <related_task_entry/>
+        <sys_class_name>gsw_change_log</sys_class_name>
+        <sys_created_by>irfan.wani</sys_created_by>
+        <sys_created_on>2026-04-06 07:42:15</sys_created_on>
+        <sys_id>7d97724e3b84c3103509f3cc73e45a0b</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>2026-04-06 07:42:15</sys_name>
+        <sys_package display_value="Data Migration" source="x_sysus_data_mig_0">9977a0f8eb03f610084cfd50dad0cd43</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Data Migration">9977a0f8eb03f610084cfd50dad0cd43</sys_scope>
+        <sys_update_name>gsw_change_log_7d97724e3b84c3103509f3cc73e45a0b</sys_update_name>
+        <sys_updated_by>irfan.wani</sys_updated_by>
+        <sys_updated_on>2026-04-06 07:42:15</sys_updated_on>
+        <type>4</type>
+    </gsw_change_log>
+</record_update>

@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update sys_domain="global" table="sys_cb_design_topic">
+    <sys_cb_design_topic action="INSERT_OR_UPDATE">
+        <compiled_topic display_value="_PRVW__b5babb73bc3840c28c9ebe9598542b9c">f89eb3563bcc8710920bd84a85e45a54</compiled_topic>
+        <design_definition>{"type":"FlowTopic","triggers":[{"type":"Trigger","name":"0a57410ac233418b9dfc1c0e84672a1e","triggerType":"request","applicability":{"type":"Applicability","mode":"script","value":"true"},"id":"0a57410ac233418b9dfc1c0e84672a1e"}],"goals":[{"name":"primary","trigger_id":"0a57410ac233418b9dfc1c0e84672a1e","nodes":[{"type":"StartGoal","goal_id":"primary","greeting_msg":{"type":"String","mode":"string","value":"gs.getMessageLang(\"Hi!  How can i help you today ?\", vaContext.getRequesterLang())"},"id":"953bb97278bb487fa149533d4bde8e66","name":"Start","expert_mode":false},{"type":"TerminateGoal","goal_id":"primary","confirmation_msg":{"type":"String","mode":"string","value":""},"id":"67adefc5298d40e6ae310d0f76a16998","name":"End","expert_mode":false},{"type":"ChoiceInputPrompt","expression_mode":"simple","metadataScript":"","cardName":"","cardFields":[],"id":"e0ee0ac17f064a03b175d8d6b787e25d","name":"choice ","goal_id":"primary","applicability":{"type":"Applicability","mode":"script","value":"true"},"expert_mode":false,"variable_id":"d220d0c6e75e478ba02bb408eb4aea22","message":{"type":"String","mode":"string","value":"gs.getMessageLang(\"choose anyone\", vaContext.getRequesterLang())"},"request_feedback":false,"skippable":{"type":"Applicability","mode":"script","value":"false"},"skipreprompt":{"type":"Applicability","mode":"script","value":"false"},"nlu_entity_binding":{"type":"NLUEntityBinding","allow_text_input":false,"use_confirmation_prompt":true},"description":""},{"type":"Decision","name":"Decision","branches":[{"type":"Branch","label":"migrate incident","expression":{"type":"Applicability","mode":"query","value":"choice_=Migrate Incident"},"id":"e47d8a3cf3a84e2ba0337851c6aa7bc2","name":"migrate incident","expert_mode":false}],"id":"6454edd7638d42bd928b8f8f5e9eff4e","goal_id":"primary","expert_mode":false},{"type":"TextOutputPrompt","value":[{"type":"String","mode":"string","value":"gs.getMessageLang(\"Enter source URL\", vaContext.getRequesterLang())"}],"request_feedback":true,"isCollapsible":true,"id":"f5ef52fd8f4f47a1af13537157f98871","name":"Enter source URL","goal_id":"primary","applicability":{"type":"Applicability","mode":"script","value":"true"},"expert_mode":false,"secure":false},{"type":"TextOutputPrompt","value":[{"type":"String","mode":"string","value":"gs.getMessageLang(\"Enter password\", vaContext.getRequesterLang())"}],"request_feedback":true,"isCollapsible":true,"id":"b0c04baad8754c0b998457b51b7c9ca3","name":"Enter password","goal_id":"primary","applicability":{"type":"Applicability","mode":"script","value":"true"},"expert_mode":false,"secure":false}],"edges":[{"type":"Edge","source_node_id":"b0c04baad8754c0b998457b51b7c9ca3","target_node_id":"67adefc5298d40e6ae310d0f76a16998","id":"9dc959caca5c479b9932014835712b19"},{"type":"Edge","source_node_id":"953bb97278bb487fa149533d4bde8e66","target_node_id":"e0ee0ac17f064a03b175d8d6b787e25d","id":"c912bf78771841f4a1e634385b7f8b74"},{"type":"Edge","source_node_id":"e0ee0ac17f064a03b175d8d6b787e25d","target_node_id":"6454edd7638d42bd928b8f8f5e9eff4e","id":"9a59b3ca269d4d1d940ca8d4f8f6381c"},{"type":"Edge","source_node_id":"6454edd7638d42bd928b8f8f5e9eff4e","target_node_id":"f5ef52fd8f4f47a1af13537157f98871","branch_id":"e47d8a3cf3a84e2ba0337851c6aa7bc2","id":"2308c2347c194e6e8b890142003cbd1c","name":"e47d8a3cf3a84e2ba0337851c6aa7bc2"},{"type":"Edge","source_node_id":"f5ef52fd8f4f47a1af13537157f98871","target_node_id":"b0c04baad8754c0b998457b51b7c9ca3","id":"8a3b44393c474fb9ad205043adf88cfc"}],"id":"primary"}],"script_variables":[],"glide_variables":[{"type":"Reference","table":"sys_user","auto_select":false,"id":"current-user","name":"user","formatType":"text","secure":false,"sensitive":false,"aiInput":false,"list":false},{"type":"Choice","choices":[{"name":"Migrate Incident","element":"Migrate Incident"},{"name":"View Migration status","element":"View Migration status"},{"name":"tell me about application","element":"tell me about application"}],"id":"d220d0c6e75e478ba02bb408eb4aea22","name":"choice_","formatType":"text","secure":false,"sensitive":false,"aiInput":false,"list":false,"label":"Choice "}],"applicability":{"type":"Applicability","mode":"script","value":"true"},"roles":[],"scope":"9977a0f8eb03f610084cfd50dad0cd43","domain":"global","topic_type":"STANDARD","channels":[],"dialog_acts_enabled":true,"id":"23fc37923bcc8710920bd84a85e45a63","name":"_PRVW__b5babb73bc3840c28c9ebe9598542b9c","key_phrases":["TraceNow"],"nlu_provider":"","nlu_model":"","nlu_model_label":"","nlu_intent":"","nlu_intent_label":"","flexible_conversation_switching":false,"autopilot_topic":false,"design_categories":[],"triggerable_by_notification":false,"description":"","model_type":"nlu_keyword","foundational":false,"modify_confirmation_enabled":true,"context_profiles":[],"title":"TraceNow","library":false,"readOnly":false,"nluMapping":"[]"}</design_definition>
+        <design_topic_id>23fc37923bcc8710920bd84a85e45a63</design_topic_id>
+        <graph>{
+  "graph_api_version": "1.0.82",
+  "goals": {
+    "primary": {
+      "id": "primary",
+      "trigger": {
+        "type": "primary"
+      },
+      "name": "primary",
+      "applicability": "",
+      "description": "",
+      "nodes": {
+        "953bb97278bb487fa149533d4bde8e66": {
+          "id": "953bb97278bb487fa149533d4bde8e66",
+          "stepType": "Start",
+          "name": "Start",
+          "greetingResponse": {
+            "value": [
+              {
+                "type": "paragraph",
+                "children": [
+                  {
+                    "text": "Hi!  How can i help you today ?"
+                  }
+                ]
+              }
+            ],
+            "mode": "simple"
+          }
+        },
+        "67adefc5298d40e6ae310d0f76a16998": {
+          "id": "67adefc5298d40e6ae310d0f76a16998",
+          "stepType": "TerminateGoal",
+          "name": "End",
+          "confirmationMessage": {
+            "mode": "simple",
+            "value": ""
+          }
+        },
+        "e0ee0ac17f064a03b175d8d6b787e25d": {
+          "name": "choice ",
+          "prompt": {
+            "value": [
+              {
+                "type": "paragraph",
+                "children": [
+                  {
+                    "text": "choose anyone "
+                  }
+                ]
+              }
+            ],
+            "mode": "simple"
+          },
+          "confirmMessage": {
+            "value": "",
+            "mode": "simple"
+          },
+          "acknowledgeMsg": {
+            "value": "",
+            "mode": "simple"
+          },
+          "applicability": {
+            "value": "",
+            "mode": "query"
+          },
+          "skippable": {
+            "value": "",
+            "mode": "query"
+          },
+          "skipReprompt": {
+            "value": "",
+            "mode": "query"
+          },
+          "defaultValue": {
+            "value": "",
+            "mode": "simple"
+          },
+          "variableId": "d220d0c6e75e478ba02bb408eb4aea22",
+          "detailDescription": "",
+          "id": "e0ee0ac17f064a03b175d8d6b787e25d",
+          "stepType": "ChoicePrompt",
+          "hasCardHeader": false,
+          "cardMetadata": {
+            "mode": "card",
+            "metadataScript": "",
+            "cardTemplate": "",
+            "cardFields": {},
+            "cardDefinition": {}
+          },
+          "withNluUserInput": false,
+          "skipIfFulfilled": false
+        },
+        "6454edd7638d42bd928b8f8f5e9eff4e": {
+          "id": "6454edd7638d42bd928b8f8f5e9eff4e",
+          "stepType": "Decision",
+          "name": "Decision"
+        },
+        "f5ef52fd8f4f47a1af13537157f98871": {
+          "id": "f5ef52fd8f4f47a1af13537157f98871",
+          "stepType": "TextOutput",
+          "name": "Enter source URL",
+          "secure": false,
+          "value": [
+            {
+              "value": [
+                {
+                  "type": "paragraph",
+                  "children": [
+                    {
+                      "text": "Enter source URL"
+                    }
+                  ]
+                }
+              ],
+              "mode": "simple",
+              "_key": "1fb710aacc654b5080979453f7cc9538"
+            }
+          ],
+          "isCollapsible": true,
+          "requestFeedback": true,
+          "applicability": {
+            "value": "",
+            "mode": "query"
+          }
+        },
+        "b0c04baad8754c0b998457b51b7c9ca3": {
+          "id": "b0c04baad8754c0b998457b51b7c9ca3",
+          "stepType": "TextOutput",
+          "name": "Enter password",
+          "secure": false,
+          "value": [
+            {
+              "value": [
+                {
+                  "type": "paragraph",
+                  "children": [
+                    {
+                      "text": "Enter password"
+                    }
+                  ]
+                }
+              ],
+              "mode": "simple",
+              "_key": "d3ce8054a918474e8eb754a108ad891a"
+            }
+          ],
+          "isCollapsible": true,
+          "requestFeedback": true,
+          "applicability": {
+            "value": "",
+            "mode": "query"
+          }
+        }
+      },
+      "edges": [
+        {
+          "id": "9dc959caca5c479b9932014835712b19",
+          "edgeType": "Edge",
+          "source": "b0c04baad8754c0b998457b51b7c9ca3",
+          "target": "67adefc5298d40e6ae310d0f76a16998",
+          "sourcePort": "",
+          "targetPort": ""
+        },
+        {
+          "id": "c912bf78771841f4a1e634385b7f8b74",
+          "edgeType": "Edge",
+          "source": "953bb97278bb487fa149533d4bde8e66",
+          "target": "e0ee0ac17f064a03b175d8d6b787e25d",
+          "sourcePort": "",
+          "targetPort": ""
+        },
+        {
+          "id": "9a59b3ca269d4d1d940ca8d4f8f6381c",
+          "edgeType": "Edge",
+          "source": "e0ee0ac17f064a03b175d8d6b787e25d",
+          "target": "6454edd7638d42bd928b8f8f5e9eff4e",
+          "sourcePort": "",
+          "targetPort": ""
+        },
+        {
+          "id": "2308c2347c194e6e8b890142003cbd1c",
+          "edgeType": "Branch",
+          "source": "6454edd7638d42bd928b8f8f5e9eff4e",
+          "target": "f5ef52fd8f4f47a1af13537157f98871",
+          "sourcePort": "",
+          "targetPort": "",
+          "expression": {
+            "value": "vaInputs.choice_=Migrate Incident",
+            "mode": "query"
+          },
+          "label": "migrate incident"
+        },
+        {
+          "id": "8a3b44393c474fb9ad205043adf88cfc",
+          "edgeType": "Edge",
+          "source": "f5ef52fd8f4f47a1af13537157f98871",
+          "target": "b0c04baad8754c0b998457b51b7c9ca3",
+          "sourcePort": "",
+          "targetPort": ""
+        }
+      ]
+    }
+  },
+  "variables": {
+    "current-user": {
+      "category": "vaInputs",
+      "id": "current-user",
+      "label": "User",
+      "name": "user",
+      "table": "sys_user",
+      "varType": "reference"
+    },
+    "d220d0c6e75e478ba02bb408eb4aea22": {
+      "id": "d220d0c6e75e478ba02bb408eb4aea22",
+      "name": "choice_",
+      "label": "Choice ",
+      "varType": "choice",
+      "choices": [
+        {
+          "label": "Migrate Incident",
+          "value": "Migrate Incident"
+        },
+        {
+          "label": "View Migration status",
+          "value": "View Migration status"
+        },
+        {
+          "label": "tell me about application",
+          "value": "tell me about application",
+          "checked": true,
+          "meta": {}
+        }
+      ],
+      "category": "vaInputs",
+      "nodeId": "e0ee0ac17f064a03b175d8d6b787e25d",
+      "isHidden": false
+    }
+  }
+}</graph>
+        <name>_PRVW__b5babb73bc3840c28c9ebe9598542b9c</name>
+        <sys_class_name>sys_cb_design_topic</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-04-07 07:30:53</sys_created_on>
+        <sys_domain>global</sys_domain>
+        <sys_id>059eb3563bcc8710920bd84a85e45a6c</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>FlowTopic</sys_name>
+        <sys_package display_value="Data Migration" source="x_sysus_data_mig_0">9977a0f8eb03f610084cfd50dad0cd43</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Data Migration">9977a0f8eb03f610084cfd50dad0cd43</sys_scope>
+        <sys_update_name>sys_cb_design_topic_059eb3563bcc8710920bd84a85e45a6c</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-04-07 07:30:53</sys_updated_on>
+        <type>FlowTopic</type>
+    </sys_cb_design_topic>
+</record_update>

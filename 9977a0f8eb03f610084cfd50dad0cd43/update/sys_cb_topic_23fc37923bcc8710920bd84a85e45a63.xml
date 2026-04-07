@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update sys_domain="global" table="sys_cb_topic">
+    <sys_cb_topic action="INSERT_OR_UPDATE">
+        <applicability/>
+        <applicability_mode>query</applicability_mode>
+        <autopilot_topic>false</autopilot_topic>
+        <category/>
+        <channels/>
+        <connect_queue/>
+        <context_profiles/>
+        <description/>
+        <dialog_acts_enabled>true</dialog_acts_enabled>
+        <expose_on_palette>false</expose_on_palette>
+        <flexible_conversation_switching>false</flexible_conversation_switching>
+        <foundational>false</foundational>
+        <graph>{
+  "graph_api_version": "1.0.82",
+  "goals": {
+    "primary": {
+      "id": "primary",
+      "trigger": {
+        "type": "primary"
+      },
+      "name": "primary",
+      "applicability": "",
+      "description": "",
+      "nodes": {
+        "953bb97278bb487fa149533d4bde8e66": {
+          "id": "953bb97278bb487fa149533d4bde8e66",
+          "stepType": "Start",
+          "name": "Start",
+          "greetingResponse": {
+            "value": [
+              {
+                "type": "paragraph",
+                "children": [
+                  {
+                    "text": "Hi!  How can i help you today ?"
+                  }
+                ]
+              }
+            ],
+            "mode": "simple"
+          }
+        },
+        "67adefc5298d40e6ae310d0f76a16998": {
+          "id": "67adefc5298d40e6ae310d0f76a16998",
+          "stepType": "TerminateGoal",
+          "name": "End",
+          "confirmationMessage": {
+            "mode": "simple",
+            "value": ""
+          }
+        },
+        "e0ee0ac17f064a03b175d8d6b787e25d": {
+          "name": "choice ",
+          "prompt": {
+            "value": [
+              {
+                "type": "paragraph",
+                "children": [
+                  {
+                    "text": "choose anyone "
+                  }
+                ]
+              }
+            ],
+            "mode": "simple"
+          },
+          "confirmMessage": {
+            "value": "",
+            "mode": "simple"
+          },
+          "acknowledgeMsg": {
+            "value": "",
+            "mode": "simple"
+          },
+          "applicability": {
+            "value": "",
+            "mode": "query"
+          },
+          "skippable": {
+            "value": "",
+            "mode": "query"
+          },
+          "skipReprompt": {
+            "value": "",
+            "mode": "query"
+          },
+          "defaultValue": {
+            "value": "",
+            "mode": "simple"
+          },
+          "variableId": "d220d0c6e75e478ba02bb408eb4aea22",
+          "detailDescription": "",
+          "id": "e0ee0ac17f064a03b175d8d6b787e25d",
+          "stepType": "ChoicePrompt",
+          "hasCardHeader": false,
+          "cardMetadata": {
+            "mode": "card",
+            "metadataScript": "",
+            "cardTemplate": "",
+            "cardFields": {},
+            "cardDefinition": {}
+          },
+          "withNluUserInput": false,
+          "skipIfFulfilled": false
+        },
+        "6454edd7638d42bd928b8f8f5e9eff4e": {
+          "id": "6454edd7638d42bd928b8f8f5e9eff4e",
+          "stepType": "Decision",
+          "name": "Decision"
+        }
+      },
+      "edges": [
+        {
+          "id": "2308c2347c194e6e8b890142003cbd1c",
+          "edgeType": "Branch",
+          "source": "6454edd7638d42bd928b8f8f5e9eff4e",
+          "target": "67adefc5298d40e6ae310d0f76a16998",
+          "sourcePort": "",
+          "targetPort": "",
+          "expression": {
+            "value": "vaInputs.choice_=Migrate Incident",
+            "mode": "query"
+          },
+          "label": "migrate incident"
+        },
+        {
+          "id": "c912bf78771841f4a1e634385b7f8b74",
+          "edgeType": "Edge",
+          "source": "953bb97278bb487fa149533d4bde8e66",
+          "target": "e0ee0ac17f064a03b175d8d6b787e25d",
+          "sourcePort": "",
+          "targetPort": ""
+        },
+        {
+          "id": "9a59b3ca269d4d1d940ca8d4f8f6381c",
+          "edgeType": "Edge",
+          "source": "e0ee0ac17f064a03b175d8d6b787e25d",
+          "target": "6454edd7638d42bd928b8f8f5e9eff4e",
+          "sourcePort": "",
+          "targetPort": ""
+        }
+      ]
+    }
+  },
+  "variables": {
+    "current-user": {
+      "category": "vaInputs",
+      "id": "current-user",
+      "label": "User",
+      "name": "user",
+      "table": "sys_user",
+      "varType": "reference"
+    },
+    "d220d0c6e75e478ba02bb408eb4aea22": {
+      "id": "d220d0c6e75e478ba02bb408eb4aea22",
+      "name": "choice_",
+      "label": "Choice ",
+      "varType": "choice",
+      "choices": [
+        {
+          "label": "Migrate Incident",
+          "value": "Migrate Incident"
+        },
+        {
+          "label": "View Migration status",
+          "value": "View Migration status"
+        },
+        {
+          "label": "tell me about application",
+          "value": "tell me about application",
+          "checked": true,
+          "meta": {}
+        }
+      ],
+      "category": "vaInputs",
+      "nodeId": "e0ee0ac17f064a03b175d8d6b787e25d",
+      "isHidden": false
+    }
+  }
+}</graph>
+        <key_phrases>TraceNow</key_phrases>
+        <library>false</library>
+        <live_agent>false</live_agent>
+        <model_type>nlu_keyword</model_type>
+        <modify_confirmation_enabled>true</modify_confirmation_enabled>
+        <name>TraceNow</name>
+        <nlu_intent/>
+        <nlu_intent_label/>
+        <nlu_model/>
+        <nlu_model_label/>
+        <nlu_provider/>
+        <palette_label/>
+        <roles/>
+        <root_topic_id/>
+        <secure_custom_input_control>false</secure_custom_input_control>
+        <source_topic_id/>
+        <sys_class_name>sys_cb_topic</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-04-07 07:23:58</sys_created_on>
+        <sys_domain>global</sys_domain>
+        <sys_id>23fc37923bcc8710920bd84a85e45a63</sys_id>
+        <sys_mod_count>3</sys_mod_count>
+        <sys_name>TraceNow</sys_name>
+        <sys_package display_value="Data Migration" source="x_sysus_data_mig_0">9977a0f8eb03f610084cfd50dad0cd43</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Data Migration">9977a0f8eb03f610084cfd50dad0cd43</sys_scope>
+        <sys_update_name>sys_cb_topic_23fc37923bcc8710920bd84a85e45a63</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-04-07 07:32:57</sys_updated_on>
+        <title>TraceNow</title>
+        <triggerable_by_notification>false</triggerable_by_notification>
+        <type>STANDARD</type>
+    </sys_cb_topic>
+    <sys_translated_text action="delete_multiple" query="documentkey=23fc37923bcc8710920bd84a85e45a63"/>
+</record_update>

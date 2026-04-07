@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update sys_domain="global" table="sys_cb_topic_language">
+    <sys_cb_topic_language action="INSERT_OR_UPDATE">
+        <cb_topic_id display_value="TraceNow">23fc37923bcc8710920bd84a85e45a63</cb_topic_id>
+        <language_code>en</language_code>
+        <nlu_entities>[{"node_id":"e0ee0ac17f064a03b175d8d6b787e25d","variable_name":"choice_","nlu_entity":"","nlu_entity_label":""}]</nlu_entities>
+        <nlu_intent>CheckITTicketStatus</nlu_intent>
+        <nlu_intent_label>CheckITTicketStatus</nlu_intent_label>
+        <nlu_model>sn_itsm_nlu_ITSM_NLU_for_VA</nlu_model>
+        <nlu_model_label>ITSM NLU for Virtual Agent</nlu_model_label>
+        <nlu_provider>64c023c17300330021a044764df6a70e</nlu_provider>
+        <sys_class_name>sys_cb_topic_language</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-04-07 07:23:58</sys_created_on>
+        <sys_domain>global</sys_domain>
+        <sys_id>affc37923bcc8710920bd84a85e45a6a</sys_id>
+        <sys_mod_count>1</sys_mod_count>
+        <sys_name/>
+        <sys_package display_value="Data Migration" source="x_sysus_data_mig_0">9977a0f8eb03f610084cfd50dad0cd43</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Data Migration">9977a0f8eb03f610084cfd50dad0cd43</sys_scope>
+        <sys_update_name>sys_cb_topic_language_affc37923bcc8710920bd84a85e45a6a</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-04-07 07:30:29</sys_updated_on>
+    </sys_cb_topic_language>
+</record_update>

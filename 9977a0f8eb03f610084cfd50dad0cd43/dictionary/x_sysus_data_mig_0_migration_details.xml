@@ -4,7 +4,7 @@
         <element label="Records Updated" max_length="40" name="records_updated" type="string"/>
         <element label="Started At" max_length="100" name="started_at" type="string"/>
         <element attributes="edge_encryption_enabled=true" default="javascript:global.getNextObjNumberPadded();" display="true" label="Number" max_length="40" name="number" type="string"/>
-        <element label="Table" max_length="80" name="table" type="simple_name_values"/>
+        <element label="Table" max_length="500" name="table" type="simple_name_values"/>
         <element label="Records Failed" max_length="40" name="records_failed" type="string"/>
         <element label="Duration" max_length="100" name="duration" type="string"/>
         <element label="Completed At" max_length="10" name="completed_at" type="string"/>
